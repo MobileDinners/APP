@@ -191,7 +191,12 @@ RESP=$(curl -s --max-time 120 -c $JAR -X POST "$B/api/signup" -H 'Content-Type: 
 ORG=$(echo "$RESP" | jq_ "d.orgId")
 SLUG=$(echo "$RESP" | jq_ "d.slug")
 echo "  created $ORG at /$SLUG"
-if [ "$ORG" != "ERR" ] && [ -n "$ORG" ]; then pass "org created"; else fail "org created" "$RESP"; fi
+# Must look like a real org id. "undefined" used to satisfy this check, so a
+# refused signup passed here and failed ten times downstream instead of once.
+case "$ORG" in
+  org_*) pass "org created" ;;
+  *)     fail "org created" "$RESP" ;;
+esac
 chk "signed in on the way out" "$(echo "$RESP" | jq_ "String(d.signedIn)")" "true"
 chk "lands on the menu editor" "$(echo "$RESP" | jq_ "d.next")" "/ops/menu"
 chk "the owner account is an owner" "$(q "SELECT role FROM staff WHERE email='$MAIL'")" "owner"

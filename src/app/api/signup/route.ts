@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { loginStaff, setSessionCookie } from "@/lib/auth";
 import { createRestaurant, SignupError } from "@/lib/signup";
+import { LIMITS, clientKey, rateLimit } from "@/lib/ratelimit";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -16,6 +17,20 @@ export async function POST(req: Request) {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Body must be JSON" }, { status: 400 });
+  }
+
+  // Each signup writes an org, an owner and a menu draft, so an unthrottled
+  // endpoint is a way to fill the database and the marketplace with junk.
+  const limit = rateLimit(
+    `signup:${clientKey(req)}`,
+    LIMITS.signup.max,
+    LIMITS.signup.windowMs,
+  );
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many signups from this address. Try again later." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+    );
   }
 
   const email = String(body.email ?? "").trim().toLowerCase();

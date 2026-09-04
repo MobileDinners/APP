@@ -98,7 +98,9 @@ echo "=== 6. the estimator recovers a KNOWN injected lift ==="
 # each with its own randomised arm split — a genuinely broken estimator misses
 # most of them, while an unlucky-but-correct one still passes.
 COVERED=0
-SIGNIFICANT=0
+POWERED=0
+POWERED_SIGNIFICANT=0
+CONSISTENT=0
 for run in 1 2 3; do
   BIG=$(curl -s -b $OWNER --max-time 240 -X POST "$B/api/campaigns" -H 'Content-Type: application/json'     -d '{"templateId":"second_order","holdoutPct":30,"ignoreQuietHours":true}')
   BID=$(echo "$BIG" | jq_ "d.campaign.campaignId")
@@ -109,10 +111,29 @@ for run in 1 2 3; do
   HI=$(echo "$SIM" | jq_ "d.measured.highCents")
   SIG=$(echo "$SIM" | jq_ "d.measured.significant")
   echo "  run $run: true=$TRUE estimated=$EST interval=[$LO, $HI] significant=$SIG"
+
   if [ "$TRUE" -ge "$LO" ] && [ "$TRUE" -le "$HI" ] 2>/dev/null; then
     COVERED=$((COVERED + 1))
   fi
-  if [ "$SIG" = "true" ]; then SIGNIFICANT=$((SIGNIFICANT + 1)); fi
+
+  # The frequency cap means run 1 sees the whole segment and later runs see
+  # only whoever was not contacted yet — by run 3 that can be a dozen people.
+  # Significance is a claim about POWER, so it is only fair to demand it when
+  # the effect is actually large enough to detect.
+  if [ "$TRUE" -ge 50000 ] 2>/dev/null; then
+    POWERED=$((POWERED + 1))
+    if [ "$SIG" = "true" ]; then POWERED_SIGNIFICANT=$((POWERED_SIGNIFICANT + 1)); fi
+  fi
+
+  # "Significant" must mean exactly "the interval excludes zero" — nothing else.
+  # A verdict that disagrees with its own interval is a broken estimator, and
+  # that is true whatever the sample size.
+  EXCLUDES_ZERO=$( [ "$LO" -gt 0 ] 2>/dev/null && echo true || echo false )
+  if [ "$SIG" = "$EXCLUDES_ZERO" ]; then
+    CONSISTENT=$((CONSISTENT + 1))
+  else
+    echo "    (verdict $SIG disagrees with interval [$LO, $HI])"
+  fi
 done
 
 if [ "$COVERED" -ge 2 ]; then
@@ -120,10 +141,19 @@ if [ "$COVERED" -ge 2 ]; then
 else
   fail "intervals cover the true effect" "only $COVERED of 3"
 fi
-if [ "$SIGNIFICANT" -ge 2 ]; then
-  pass "a real 25pp lift reads as significant ($SIGNIFICANT of 3)"
+
+if [ "$POWERED" -eq 0 ]; then
+  fail "at least one run had enough audience to test detection" "all three were tiny"
+elif [ "$POWERED_SIGNIFICANT" -eq "$POWERED" ]; then
+  pass "every adequately-powered run detected the lift ($POWERED_SIGNIFICANT of $POWERED)"
 else
-  fail "a real lift reads as significant" "only $SIGNIFICANT of 3"
+  fail "powered runs detect a real lift" "$POWERED_SIGNIFICANT of $POWERED"
+fi
+
+if [ "$CONSISTENT" -eq 3 ]; then
+  pass "and every verdict agrees with its own interval (3 of 3)"
+else
+  fail "verdicts agree with their intervals" "only $CONSISTENT of 3"
 fi
 
 echo

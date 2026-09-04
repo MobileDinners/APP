@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createOrder, listOrders, OrderError } from "@/lib/orders";
 import { getSession } from "@/lib/auth";
+import { LIMITS, rateLimit } from "@/lib/ratelimit";
 import { pushOrderToPos } from "@/lib/pos/sync";
 import type { Fulfillment } from "@/lib/types";
 
@@ -30,6 +31,21 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "Sign in to place an order", code: "auth_required" },
       { status: 401 },
+    );
+  }
+
+  // Keyed on the diner, not the address: a household or an office behind one
+  // NAT should not throttle each other, and the session is the harder thing to
+  // forge anyway.
+  const limit = rateLimit(
+    `orders:${session.personId}`,
+    LIMITS.orders.max,
+    LIMITS.orders.windowMs,
+  );
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "That is a lot of orders. Give it a few minutes.", code: "rate_limited" },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
     );
   }
 

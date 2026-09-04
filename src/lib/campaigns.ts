@@ -336,6 +336,53 @@ function variance(xs: number[]): number {
 }
 
 /**
+ * Two-tailed 95% critical value of Student's t.
+ *
+ * The interval was using 1.96 — the NORMAL critical value — while the comment
+ * claimed a Welch comparison. Welch is a t procedure, and the difference is not
+ * cosmetic: at 12 degrees of freedom the right value is 2.18, so a z-interval
+ * is 12% too narrow and covers the truth well below the 95% it advertises.
+ * Under-stating uncertainty is the exact failure this whole feature exists to
+ * avoid, so it is worth the twenty lines.
+ *
+ * Cornish–Fisher expansion of the t quantile in 1/df. Within ~0.002 of the true
+ * value from df = 5 upward, which is far tighter than the noise in any audience
+ * this will ever run on.
+ */
+function tCritical95(df: number): number {
+  const z = 1.959964;
+  // Below ~4 df the expansion diverges and the sample is worthless anyway;
+  // clamp to a deliberately wide value rather than return something confident.
+  if (!Number.isFinite(df) || df < 4) return 3.2;
+
+  const z3 = z ** 3;
+  const z5 = z ** 5;
+  const z7 = z ** 7;
+  return (
+    z +
+    (z3 + z) / (4 * df) +
+    (5 * z5 + 16 * z3 + 3 * z) / (96 * df ** 2) +
+    (3 * z7 + 19 * z5 + 17 * z3 - 15 * z) / (384 * df ** 3)
+  );
+}
+
+/**
+ * Welch–Satterthwaite degrees of freedom.
+ *
+ * Two arms with different sizes and different variances do not share a df; this
+ * is the effective one. A tiny holdout drags it down, which is precisely how a
+ * depleted audience is supposed to widen its own interval.
+ */
+function welchDf(v1: number, n1: number, v2: number, n2: number): number {
+  if (n1 < 2 || n2 < 2) return 0;
+  const a = v1 / n1;
+  const b = v2 / n2;
+  const numerator = (a + b) ** 2;
+  const denominator = (a * a) / (n1 - 1) + (b * b) / (n2 - 1);
+  return denominator > 0 ? numerator / denominator : 0;
+}
+
+/**
  * Incremental revenue with a 95% interval, using a Welch two-sample comparison
  * of revenue per person. The interval is the honest part: with realistic
  * audience sizes it will often cross zero, which means the campaign has not
@@ -352,11 +399,16 @@ export function measure(orgId: string, campaignId: string): CampaignResult | nul
   const hMean = mean(holdout);
   const lift = tMean - hMean;
 
+  const tVar = variance(treated);
+  const hVar = variance(holdout);
   const se = Math.sqrt(
-    (variance(treated) / Math.max(1, treated.length)) +
-    (variance(holdout) / Math.max(1, holdout.length)),
+    tVar / Math.max(1, treated.length) + hVar / Math.max(1, holdout.length),
   );
-  const margin = 1.96 * se;
+
+  // t, not z. See tCritical95 — using 1.96 here made every interval too narrow,
+  // and worst exactly where the audience was smallest.
+  const df = welchDf(tVar, treated.length, hVar, holdout.length);
+  const margin = tCritical95(df) * se;
 
   const daysElapsed = Math.floor(
     (Date.now() - new Date(campaign.activatedAt).getTime()) / 86_400_000,
