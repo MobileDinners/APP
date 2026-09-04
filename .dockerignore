@@ -1,0 +1,10 @@
+node_modules
+.next
+data
+docs/_parts
+.git
+.gitignore
+*.md
+!README.md
+.env*
+scratchpad

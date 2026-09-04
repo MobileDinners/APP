@@ -1,0 +1,412 @@
+
+<section id="s01">
+  <div class="chit">
+    <div class="meta"><span><b>MD-01</b></span><span>Architecture</span><span>Section 01 of 10</span><span>Backend / Data / Contracts</span></div>
+    <h2>Full system architecture</h2>
+    <p class="lede">Nineteen services across three planes, one event spine, one menu-of-record, and a hard local-first boundary at the restaurant edge.</p>
+  </div>
+
+  <div class="prose">
+    <h3>1.1 &nbsp;Topology</h3>
+    <p>The system is a modular monolith at the core with a small number of genuinely independent services carved out where the scaling, latency, or failure profile differs sharply. Resist the urge to start with nineteen deployables; start with four, and split along the seams drawn below as load demands.</p>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 01.1 &mdash; System topology</span><b>MD-ARCH-101</b></div>
+<pre>
+ ┌─────────────────────────── <i>EDGE — RESTAURANT PREMISES</i> ────────────────────────────┐
+ │                                                                                     │
+ │  <b>POS Terminal</b> (Android/iPad)   <b>KDS Screens</b>       <b>MD Gateway</b> (Linux mini-PC)      │
+ │  ┌─────────────────────┐        ┌────────────┐     ┌──────────────────────────┐    │
+ │  │ Order capture       │◀──────▶│ Ticket rail│◀───▶│ SQLite/Postgres local    │    │
+ │  │ Local SQLite (WAL)  │  LAN   │ Bump/recall│ LAN │ Outbox + inbox queues    │    │
+ │  │ Card reader (P2PE)  │        └────────────┘     │ Printer/cash-drawer bus  │    │
+ │  └─────────────────────┘                           │ mDNS discovery · MQTT    │    │
+ │           │                                        │ Store-and-forward auth   │    │
+ │           └── EMV ──▶ <u>Processor SDK</u> (direct, never via MD)  └────────┬─────────┘    │
+ └──────────────────────────────────────────────────────────────────┼──────────────────┘
+                                        mTLS · gRPC-web + WebSocket │ (resumable)
+ ┌──────────────────────────────────────────────────────────────────▼──────────────────┐
+ │                              <i>CLOUD — API EDGE</i>                                      │
+ │   Cloudflare (WAF/DDoS/CDN) ──▶ API Gateway (Kong/Envoy) ──▶ AuthN (OIDC, JWT+JWKS) │
+ │   Rate limit · idempotency cache (Redis) · request signing · tenant claim injection │
+ └──────────────────────────────────────┬──────────────────────────────────────────────┘
+                                        │
+        ┌───────────────────────────────┼───────────────────────────────┐
+        ▼                               ▼                               ▼
+ <i>PLANE A — OPERATIONS</i>          <i>PLANE B — GROWTH</i>              <i>PLANE C — DEMAND</i>
+ ┌────────────────────┐      ┌────────────────────┐      ┌────────────────────────┐
+ │ svc-order          │      │ svc-crm            │      │ svc-marketplace        │
+ │ svc-menu           │      │ svc-campaign       │      │ svc-search             │
+ │ svc-kitchen        │      │ svc-loyalty        │      │ svc-dispatch           │
+ │ svc-payment        │      │ svc-sites          │      │ svc-tracking           │
+ │ svc-ledger         │      │ svc-analytics      │      │ svc-recs               │
+ │ svc-device         │      │ svc-ai-orchestrator│      │ svc-identity           │
+ │ svc-tenant         │      │                    │      │ svc-notify             │
+ └─────────┬──────────┘      └─────────┬──────────┘      └───────────┬────────────┘
+           └───────────────────────────┼─────────────────────────────┘
+                                       ▼
+ ┌─────────────────────────────── <b>EVENT SPINE</b> ────────────────────────────────────────┐
+ │  Kafka / Redpanda · 24 topics · Avro+Schema Registry · exactly-once via txn producer │
+ │  Debezium CDC from Postgres → outbox topics · Flink/Materialize for streaming aggs   │
+ └───────────┬───────────────────────┬─────────────────────────┬───────────────────────┘
+             ▼                       ▼                         ▼
+   <u>Postgres 16</u> (RLS,          <u>ClickHouse</u>              <u>Feature Store</u>
+   partitioned, PgBouncer)    (events, analytics,      (Feast · online: Redis,
+   + TimescaleDB for metrics   funnels, cohorts)        offline: Iceberg/S3)
+             │                                                  │
+             ▼                                                  ▼
+   <u>Redis</u> (cache, locks,      <u>S3/R2</u> (media, menu       <u>Model Serving</u> (Triton +
+   geo, rate limits)          snapshots, invoices)      vLLM + LLM API routing)
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>1.2 &nbsp;Service catalog</h3>
+    <p>Each service owns its tables. Cross-service reads happen via API or event projection, never via direct table access. The <em class="term">Split at</em> column is the trigger for extracting a service from the modular monolith.</p>
+  </div>
+
+  <div class="tw bleed">
+    <table>
+      <caption>19 services. Bold rows are the four deployables at MVP; everything else starts as a module inside <span class="mono">core-api</span>.</caption>
+      <thead><tr><th>Service</th><th>Plane</th><th>Owns</th><th>Key deps</th><th>Split at</th></tr></thead>
+      <tbody>
+        <tr><td class="k"><strong>core-api</strong></td><td>A/B</td><td>Modular monolith host: order, menu, tenant, ledger, crm, loyalty</td><td>Postgres, Redis, Kafka</td><td>&mdash;</td></tr>
+        <tr><td class="k">svc-order</td><td>A</td><td><span class="mono">orders</span>, <span class="mono">order_items</span>, <span class="mono">order_events</span>, state machine, idempotency</td><td>menu, payment, ledger</td><td>&gt;300 orders/s peak</td></tr>
+        <tr><td class="k">svc-menu</td><td>A</td><td><span class="mono">menus</span>, <span class="mono">menu_versions</span>, <span class="mono">items</span>, <span class="mono">modifier_groups</span>, availability</td><td>S3 (snapshots)</td><td>Multi-brand publishing</td></tr>
+        <tr><td class="k">svc-kitchen</td><td>A</td><td>Ticket routing rules, station map, prep-time model, bump state</td><td>order, device</td><td>KDS &gt; 5k screens</td></tr>
+        <tr><td class="k">svc-payment</td><td>A</td><td>Payment intents, captures, refunds, tips, split tenders, disputes</td><td>Processor (Stripe/Adyen), ledger</td><td>Payfac migration</td></tr>
+        <tr><td class="k">svc-ledger</td><td>A</td><td>Double-entry journal, payouts, fees, tax accrual, 1099-K exports</td><td>Postgres only (no cache)</td><td>Never &mdash; keep isolated</td></tr>
+        <tr><td class="k">svc-device</td><td>A</td><td>Terminal/printer/KDS registry, pairing, firmware, heartbeat, remote diag</td><td>MQTT broker</td><td>&gt;20k devices</td></tr>
+        <tr><td class="k">svc-tenant</td><td>A</td><td>Orgs, locations, staff, roles, permissions, hours, service areas</td><td>Auth provider</td><td>&mdash;</td></tr>
+        <tr><td class="k"><strong>svc-marketplace</strong></td><td>C</td><td>Listings, availability, fees, promos, cart, checkout orchestration</td><td>order, search, dispatch</td><td>&mdash;</td></tr>
+        <tr><td class="k">svc-search</td><td>C</td><td>Geo + text + vector retrieval over listings and items</td><td>OpenSearch, pgvector</td><td>&gt;2M items indexed</td></tr>
+        <tr><td class="k">svc-dispatch</td><td>C</td><td>Courier assignment, batching, ETA, offer/accept, live route state</td><td>Courier APIs, Redis geo</td><td>Own fleet launch</td></tr>
+        <tr><td class="k">svc-tracking</td><td>C</td><td>WebSocket fan-out of order + driver state to guests</td><td>Redis pub/sub</td><td>&gt;50k concurrent</td></tr>
+        <tr><td class="k">svc-recs</td><td>C</td><td>Candidate generation, ranking, slate assembly, exploration policy</td><td>Feature store, Triton</td><td>Day 1 (latency isolation)</td></tr>
+        <tr><td class="k">svc-identity</td><td>C</td><td>Consumer accounts, device graph, consent, guest&rarr;account merge</td><td>Auth provider</td><td>&mdash;</td></tr>
+        <tr><td class="k">svc-crm</td><td>B</td><td>Unified profiles, identity resolution, segments, traits, suppression</td><td>ClickHouse, Kafka</td><td>&gt;10M profiles</td></tr>
+        <tr><td class="k">svc-campaign</td><td>B</td><td>Journeys, triggers, A/B, send scheduling, SMS/email delivery, quiet hours</td><td>Twilio, SES/Postmark</td><td>&gt;5M sends/mo</td></tr>
+        <tr><td class="k">svc-loyalty</td><td>B</td><td>Points, tiers, rules engine, cross-brand wallet, breakage, liability</td><td>ledger</td><td>Day 1 (auditability)</td></tr>
+        <tr><td class="k">svc-sites</td><td>B</td><td>AI site builder, page model, themes, SEO, schema.org, edge rendering</td><td>LLM, CDN</td><td>&mdash;</td></tr>
+        <tr><td class="k">svc-analytics</td><td>B</td><td>Metrics API, cohorts, funnels, attribution, exports</td><td>ClickHouse</td><td>&mdash;</td></tr>
+        <tr><td class="k"><strong>svc-ai-orchestrator</strong></td><td>B</td><td>Prompt registry, model routing, tool execution, evals, cost guardrails</td><td>All model backends</td><td>Day 1</td></tr>
+        <tr><td class="k"><strong>svc-notify</strong></td><td>C</td><td>Push, SMS, email, in-app; preference + throttle enforcement</td><td>FCM/APNs, Twilio</td><td>&mdash;</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <h3>1.3 &nbsp;Event spine</h3>
+    <p>Every meaningful state transition publishes a versioned Avro event to Kafka via the transactional outbox pattern (Debezium CDC on an <span class="mono">outbox</span> table inside the same Postgres transaction as the state change). This eliminates the dual-write problem: an order is never committed without its event, and never publishes an event for a rolled-back order.</p>
+  </div>
+
+  <div class="tw bleed">
+    <table>
+      <caption>Core topic catalog. Partition key determines ordering guarantees &mdash; per-order ordering is required for the state machine; per-location ordering is required for kitchen sequencing.</caption>
+      <thead><tr><th>Topic</th><th>Key</th><th>Producers</th><th>Primary consumers</th><th>Retention</th></tr></thead>
+      <tbody>
+        <tr><td class="k">order.lifecycle.v1</td><td class="mono">order_id</td><td>svc-order</td><td>kitchen, dispatch, tracking, crm, analytics, loyalty</td><td>30d + compacted</td></tr>
+        <tr><td class="k">order.item.v1</td><td class="mono">order_id</td><td>svc-order</td><td>analytics, optimizer, recs</td><td>30d</td></tr>
+        <tr><td class="k">menu.published.v1</td><td class="mono">location_id</td><td>svc-menu</td><td>marketplace, search, sites, POS sync</td><td>compacted</td></tr>
+        <tr><td class="k">menu.availability.v1</td><td class="mono">location_id</td><td>POS, svc-menu</td><td>marketplace, search, recs</td><td>1d</td></tr>
+        <tr><td class="k">payment.settled.v1</td><td class="mono">payment_id</td><td>svc-payment</td><td>ledger, analytics</td><td>7y (archived to S3)</td></tr>
+        <tr><td class="k">ledger.entry.v1</td><td class="mono">journal_id</td><td>svc-ledger</td><td>reporting, exports</td><td>7y</td></tr>
+        <tr><td class="k">kitchen.ticket.v1</td><td class="mono">location_id</td><td>svc-kitchen</td><td>KDS, prep-time model, tracking</td><td>7d</td></tr>
+        <tr><td class="k">dispatch.assignment.v1</td><td class="mono">delivery_id</td><td>svc-dispatch</td><td>tracking, notify, analytics</td><td>30d</td></tr>
+        <tr><td class="k">driver.location.v1</td><td class="mono">driver_id</td><td>Driver app</td><td>tracking, dispatch (ETA)</td><td>4h</td></tr>
+        <tr><td class="k">identity.resolved.v1</td><td class="mono">person_id</td><td>svc-crm</td><td>loyalty, recs, campaign</td><td>compacted</td></tr>
+        <tr><td class="k">loyalty.balance.v1</td><td class="mono">person_id</td><td>svc-loyalty</td><td>marketplace, ledger, notify</td><td>compacted</td></tr>
+        <tr><td class="k">campaign.send.v1</td><td class="mono">campaign_id</td><td>svc-campaign</td><td>analytics, attribution, suppression</td><td>90d</td></tr>
+        <tr><td class="k">consumer.behavior.v1</td><td class="mono">person_id</td><td>Apps, web</td><td>recs, feature store, analytics</td><td>90d</td></tr>
+        <tr><td class="k">device.health.v1</td><td class="mono">device_id</td><td>Gateway, terminals</td><td>svc-device, alerting</td><td>7d</td></tr>
+        <tr><td class="k">ai.decision.v1</td><td class="mono">decision_id</td><td>svc-ai-orchestrator</td><td>evals, audit, analytics</td><td>1y</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note cool">
+    <span class="lbl">Why Redpanda over Kafka for the first 18 months</span>
+    <p>Single binary, no ZooKeeper/KRaft operational surface, Kafka wire-compatible, and roughly a third of the infrastructure cost at low volume. Migrating to MSK or Confluent later is a configuration change, not a rewrite, because the client contract is identical. This is a deliberate trade of ceiling for velocity at a stage where velocity is the constraint.</p>
+  </div>
+
+  <div class="prose">
+    <h3>1.4 &nbsp;Order state machine</h3>
+    <p>One state machine governs every order regardless of channel (POS, web, marketplace, phone). Channel affects which transitions are permitted and who may trigger them, never the shape of the machine.</p>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 01.2 &mdash; Order lifecycle</span><b>MD-ARCH-102</b></div>
+<pre>
+                       ┌──────────┐
+                       │  DRAFT   │  cart exists, not submitted
+                       └────┬─────┘
+                            │ submit(idempotency_key)
+                            ▼
+    payment fails      ┌──────────┐        auth ok       ┌───────────┐
+  ◀────────────────────│ PENDING  │────────────────────▶ │ CONFIRMED │
+  │                    │ _PAYMENT │                      └─────┬─────┘
+  │                    └──────────┘                            │ route to stations
+  ▼                                                            ▼
+┌────────┐   ◀── reject(reason) ────────────────────────  ┌───────────┐
+│ FAILED │                                                │ ACCEPTED  │ ◀─ auto-accept
+└────────┘                                                └─────┬─────┘    or manual
+                                                                │ first station fires
+                                                                ▼
+                                                          ┌───────────┐
+                                                          │ IN_KITCHEN│──┐
+                                                          └─────┬─────┘  │ all stations bumped
+                                                                │        │
+                                                                ▼        │
+                                                          ┌───────────┐◀─┘
+                                                          │   READY   │
+                                                          └─────┬─────┘
+                            ┌───────────────────────────────────┼──────────────────┐
+              fulfillment = │ PICKUP                            │ DELIVERY         │ DINE_IN
+                            ▼                                   ▼                  ▼
+                      ┌───────────┐                      ┌─────────────┐    ┌───────────┐
+                      │ AWAITING_ │                      │ COURIER_    │    │  SERVED   │
+                      │  PICKUP   │                      │ ASSIGNED    │    └─────┬─────┘
+                      └─────┬─────┘                      └──────┬──────┘          │
+                            │ handoff                           │ picked_up       │
+                            │                                   ▼                 │
+                            │                            ┌─────────────┐          │
+                            │                            │ IN_TRANSIT  │          │
+                            │                            └──────┬──────┘          │
+                            │                                   │ delivered       │
+                            └───────────────┬───────────────────┴─────────────────┘
+                                            ▼
+                                     ┌─────────────┐        ┌──────────┐
+                                     │  COMPLETED  │───────▶│ SETTLED  │ (capture + ledger)
+                                     └─────────────┘        └──────────┘
+
+  Terminal-adjacent: <i>CANCELLED</i> (pre-IN_KITCHEN, full void) ·
+                     <i>REFUNDED</i> (post-SETTLED, reverse entry) ·
+                     <i>PARTIALLY_REFUNDED</i> · <i>DISPUTED</i> (chargeback hold)
+
+  Invariants: (1) transitions are append-only rows in <b>order_events</b>;
+              (2) current state = fold(events), never a mutable column of record;
+              (3) every transition carries actor_id, source (POS|WEB|MKT|API|SYSTEM),
+                  and a monotonic per-order sequence number for conflict resolution.
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>1.5 &nbsp;Database schema &mdash; core tables</h3>
+    <p>Postgres 16 with row-level security. Every tenant-scoped table carries <span class="mono">org_id</span> as the first column of its primary key and is covered by an RLS policy keyed to a session GUC set by the connection pool at checkout. Money is <span class="mono">BIGINT</span> minor units plus an ISO-4217 code; there is no <span class="mono">NUMERIC</span> price column anywhere in the transaction path.</p>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 01.3 &mdash; Tenancy, menu, and order DDL (abridged)</span><b>MD-DDL-001</b></div>
+<pre>
+<i>-- ============ TENANCY ============</i>
+<b>CREATE TABLE</b> orgs (
+  org_id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  legal_name      text NOT NULL,
+  brand_name      text NOT NULL,
+  plan_tier       text NOT NULL CHECK (plan_tier IN ('starter','growth','scale','enterprise')),
+  processor_acct  text,                      <i>-- connected account ref, never card data</i>
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
+<b>CREATE TABLE</b> locations (
+  org_id          uuid NOT NULL REFERENCES orgs,
+  location_id     uuid NOT NULL DEFAULT gen_random_uuid(),
+  name            text NOT NULL,
+  timezone        text NOT NULL,             <i>-- IANA; all business-day math uses this</i>
+  geo             geography(Point,4326) NOT NULL,
+  address         jsonb NOT NULL,
+  service_radius_m int  NOT NULL DEFAULT 8000,
+  hours           jsonb NOT NULL,            <i>-- per-service-type, with exceptions</i>
+  status          text NOT NULL DEFAULT 'active',
+  PRIMARY KEY (org_id, location_id)
+);
+<b>CREATE INDEX</b> ON locations USING gist (geo);
+
+<i>-- ============ MENU (immutable versions) ============</i>
+<b>CREATE TABLE</b> menu_versions (
+  org_id          uuid NOT NULL,
+  menu_version_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  location_id     uuid NOT NULL,
+  version_no      bigint NOT NULL,
+  content_hash    bytea NOT NULL,            <i>-- sha256 of canonical JSON</i>
+  snapshot_uri    text  NOT NULL,            <i>-- s3://…/menu/{hash}.json</i>
+  published_at    timestamptz,
+  published_by    uuid,
+  source          text NOT NULL,             <i>-- 'console'|'ai_optimizer'|'pos_sync'|'import'</i>
+  PRIMARY KEY (org_id, menu_version_id),
+  UNIQUE (org_id, location_id, version_no)
+);
+
+<b>CREATE TABLE</b> items (
+  org_id          uuid NOT NULL,
+  item_id         uuid NOT NULL DEFAULT gen_random_uuid(),
+  sku             text,
+  name            text NOT NULL,
+  description     text,
+  price_cents     bigint NOT NULL CHECK (price_cents &gt;= 0),
+  currency        char(3) NOT NULL DEFAULT 'USD',
+  cost_cents      bigint,                    <i>-- food cost; drives margin-aware ranking</i>
+  prep_seconds    int NOT NULL DEFAULT 300,
+  station_code    text NOT NULL,             <i>-- routes the ticket line</i>
+  tax_category    text NOT NULL DEFAULT 'prepared_food',
+  tags            text[] NOT NULL DEFAULT '{}',
+  embedding       vector(768),               <i>-- pgvector, for semantic search + recs</i>
+  is_active       boolean NOT NULL DEFAULT true,
+  PRIMARY KEY (org_id, item_id)
+);
+
+<b>CREATE TABLE</b> modifier_groups (
+  org_id uuid NOT NULL, group_id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  min_select int NOT NULL DEFAULT 0,
+  max_select int NOT NULL DEFAULT 1,
+  selection_type text NOT NULL CHECK (selection_type IN ('single','multi','quantity')),
+  PRIMARY KEY (org_id, group_id)
+);
+
+<i>-- ============ ORDERS ============</i>
+<b>CREATE TABLE</b> orders (
+  org_id            uuid NOT NULL,
+  order_id          uuid NOT NULL DEFAULT gen_random_uuid(),
+  location_id       uuid NOT NULL,
+  menu_version_id   uuid NOT NULL,           <i>-- exact menu the guest saw</i>
+  person_id         uuid,                    <i>-- null for anonymous walk-up</i>
+  channel           text NOT NULL CHECK (channel IN ('pos','web','marketplace','phone','kiosk','api')),
+  fulfillment       text NOT NULL CHECK (fulfillment IN ('dine_in','pickup','delivery','curbside')),
+  state             text NOT NULL,           <i>-- projection; source of truth is order_events</i>
+  subtotal_cents    bigint NOT NULL,
+  tax_cents         bigint NOT NULL,
+  tip_cents         bigint NOT NULL DEFAULT 0,
+  delivery_fee_cents bigint NOT NULL DEFAULT 0,
+  service_fee_cents bigint NOT NULL DEFAULT 0,
+  discount_cents    bigint NOT NULL DEFAULT 0,
+  total_cents       bigint NOT NULL,
+  currency          char(3) NOT NULL DEFAULT 'USD',
+  idempotency_key   text NOT NULL,
+  origin_device_id  uuid,
+  placed_at         timestamptz NOT NULL DEFAULT now(),
+  promised_at       timestamptz,
+  business_date     date NOT NULL,           <i>-- computed in location timezone</i>
+  PRIMARY KEY (org_id, order_id),
+  UNIQUE (org_id, idempotency_key)
+) PARTITION BY RANGE (business_date);
+
+<b>CREATE TABLE</b> order_events (
+  org_id       uuid   NOT NULL,
+  order_id     uuid   NOT NULL,
+  seq          bigint NOT NULL,              <i>-- monotonic per order</i>
+  event_type   text   NOT NULL,
+  payload      jsonb  NOT NULL,
+  actor_id     uuid,
+  source       text   NOT NULL,
+  occurred_at  timestamptz NOT NULL,         <i>-- device clock (may be skewed)</i>
+  recorded_at  timestamptz NOT NULL DEFAULT now(),  <i>-- server clock (authoritative)</i>
+  PRIMARY KEY (org_id, order_id, seq)
+);
+
+<i>-- ============ ROW LEVEL SECURITY ============</i>
+<b>ALTER TABLE</b> orders ENABLE ROW LEVEL SECURITY;
+<b>CREATE POLICY</b> tenant_isolation ON orders
+  USING (org_id = current_setting('app.org_id', true)::uuid);
+<i>-- PgBouncer/pgcat sets app.org_id from the verified JWT claim on every checkout.
+-- Application code CANNOT widen this; a missing claim yields zero rows, not all rows.</i>
+</pre>
+  </div>
+
+  <div class="prose">
+    <h4>Identity, loyalty, and ledger</h4>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 01.4 &mdash; Cross-brand identity, loyalty wallet, double-entry ledger</span><b>MD-DDL-002</b></div>
+<pre>
+<i>-- One person, many restaurants. This table is platform-scoped, NOT tenant-scoped.</i>
+<b>CREATE TABLE</b> persons (
+  person_id     uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email         citext UNIQUE,
+  phone_e164    text UNIQUE,
+  display_name  text,
+  marketing_consent jsonb NOT NULL DEFAULT '{}',  <i>-- per-channel, per-org, timestamped</i>
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+<i>-- Tenant-scoped view of a person. A restaurant sees only its own relationship.</i>
+<b>CREATE TABLE</b> customer_profiles (
+  org_id        uuid NOT NULL,
+  person_id     uuid NOT NULL REFERENCES persons,
+  first_order_at timestamptz,
+  last_order_at  timestamptz,
+  order_count    int    NOT NULL DEFAULT 0,
+  lifetime_cents bigint NOT NULL DEFAULT 0,
+  aov_cents      bigint GENERATED ALWAYS AS
+                 (CASE WHEN order_count=0 THEN 0 ELSE lifetime_cents/order_count END) STORED,
+  rfm_segment    text,                        <i>-- champion|loyal|at_risk|lapsed|new</i>
+  churn_p        real,                        <i>-- model output, 0..1</i>
+  predicted_ltv_cents bigint,
+  PRIMARY KEY (org_id, person_id)
+);
+
+<i>-- Identity resolution: deterministic first, probabilistic second, always reversible.</i>
+<b>CREATE TABLE</b> identity_links (
+  person_id   uuid NOT NULL,
+  identifier  text NOT NULL,          <i>-- hashed email | phone | device_id | card_fingerprint</i>
+  id_type     text NOT NULL,
+  confidence  real NOT NULL,          <i>-- 1.0 deterministic; &lt;1.0 probabilistic</i>
+  method      text NOT NULL,          <i>-- 'login'|'otp'|'card_fp'|'device_graph'</i>
+  linked_at   timestamptz NOT NULL DEFAULT now(),
+  unlinked_at timestamptz,            <i>-- soft-unlink preserves audit trail</i>
+  PRIMARY KEY (identifier, id_type, person_id)
+);
+
+<i>-- Cross-brand points. Balance is a projection; ledger below is the truth.</i>
+<b>CREATE TABLE</b> loyalty_accounts (
+  person_id      uuid PRIMARY KEY REFERENCES persons,
+  points_balance bigint NOT NULL DEFAULT 0 CHECK (points_balance &gt;= 0),
+  tier           text NOT NULL DEFAULT 'bronze',
+  tier_progress_cents bigint NOT NULL DEFAULT 0,
+  tier_expires_at timestamptz
+);
+
+<b>CREATE TABLE</b> loyalty_entries (
+  entry_id    bigserial PRIMARY KEY,
+  person_id   uuid NOT NULL,
+  org_id      uuid,                   <i>-- earning org; NULL for platform grants</i>
+  order_id    uuid,
+  delta       bigint NOT NULL,        <i>-- +earn / −redeem / −expire</i>
+  reason      text NOT NULL,
+  liability_cents bigint NOT NULL,    <i>-- cash value moved onto/off the balance sheet</i>
+  expires_at  timestamptz,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+<i>-- Double-entry. Every cent that moves creates two rows summing to zero.</i>
+<b>CREATE TABLE</b> journal_entries (
+  journal_id  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id      uuid NOT NULL,
+  order_id    uuid,
+  entry_type  text NOT NULL,          <i>-- sale|tax|tip|fee|payout|refund|chargeback|points</i>
+  occurred_at timestamptz NOT NULL DEFAULT now()
+);
+<b>CREATE TABLE</b> journal_lines (
+  journal_id  uuid NOT NULL REFERENCES journal_entries,
+  line_no     int  NOT NULL,
+  account     text NOT NULL,          <i>-- 'cash','ar_processor','sales','sales_tax_payable',
+                                          'tips_payable','platform_fee_revenue',
+                                          'loyalty_liability','driver_payable'</i>
+  debit_cents  bigint NOT NULL DEFAULT 0,
+  credit_cents bigint NOT NULL DEFAULT 0,
+  PRIMARY KEY (journal_id, line_no),
+  CHECK (debit_cents = 0 OR credit_cents = 0)
+);
+<i>-- Enforced by trigger: SUM(debit) = SUM(credit) per journal_id. A journal that does
+-- not balance cannot commit. This is the difference between an accounting system and
+-- a pile of numbers.</i>
+</pre>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Schema decision &mdash; why loyalty is platform-scoped but profiles are tenant-scoped</span>
+    <p>A guest has <strong>one</strong> points wallet across every Mobile Dinners restaurant &mdash; that is the consumer hook, and it is what an aggregator cannot copy without cannibalizing its own commission. But a restaurant must never be able to query another restaurant's customer relationship. So <span class="mono">persons</span> and <span class="mono">loyalty_accounts</span> live outside tenant RLS, while <span class="mono">customer_profiles</span> is a tenant-scoped projection that exposes only the slice belonging to that org. Cross-brand aggregates reach operators only as anonymized, k-anonymized cohort statistics (minimum cohort size 25).</p>
+  </div>
+</section>

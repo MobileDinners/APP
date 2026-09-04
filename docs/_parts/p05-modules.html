@@ -1,0 +1,262 @@
+
+<section id="s02">
+  <div class="chit">
+    <div class="meta"><span><b>MD-02</b></span><span>Modules</span><span>Section 02 of 10</span><span>22 specs</span></div>
+    <h2>Module specifications</h2>
+    <p class="lede">Every module stated as purpose, inputs, outputs, dependencies, and the edge cases that will actually break it in production. The edge-case row is the useful one &mdash; it is where the estimate doubles.</p>
+  </div>
+
+  <div class="prose">
+    <h3>2.A &nbsp;Restaurant OS &mdash; Plane A</h3>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">A-01</span><h5>Point of Sale</h5><span class="pill p-crit">Plane A</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Capture every order regardless of channel into one state machine, take payment, and keep working when the network does not.</dd>
+      <dt>Inputs</dt><dd>Staff taps, barcode/QR scans, card reader events, cash drawer events, marketplace order injections, phone orders, kiosk sessions, published menu version.</dd>
+      <dt>Outputs</dt><dd><b>order</b> + <b>order_events</b>, payment intent/capture, kitchen ticket, printed/emailed receipt, journal entries, <span class="mono">order.lifecycle.v1</span>.</dd>
+      <dt>Depends on</dt><dd>svc-menu (version pin), svc-payment, svc-kitchen, svc-ledger, local gateway, device registry.</dd>
+      <dt>Edge cases</dt><dd>Split tender across 4 cards and cash; partial refund after a tip adjust; item 86'd <b>after</b> the guest paid; two terminals editing one open ticket; drawer opened without a sale; shift change mid-order; tax rate change at midnight during a late-night service; comp/void by a manager who then clocks out; duplicate submit from a double-tap on a laggy screen; order placed against a menu version that was superseded 200ms earlier.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">A-02</span><h5>Menu management &amp; sync</h5><span class="pill p-crit">Plane A</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Hold one menu of record, publish immutable versions, and propagate them everywhere within 20 seconds.</dd>
+      <dt>Inputs</dt><dd>Console edits, CSV/POS import, AI optimizer proposals, availability toggles from KDS, dayparting rules, channel price overrides.</dd>
+      <dt>Outputs</dt><dd>Versioned snapshot + content hash in S3, CDN-cached menu JSON, <span class="mono">menu.published.v1</span>, per-channel projections (POS, storefront, marketplace, print).</dd>
+      <dt>Depends on</dt><dd>S3/CDN, search reindex, POS sync adapters.</dd>
+      <dt>Edge cases</dt><dd>Modifier group referenced by a deleted item; circular modifier nesting; a price of $0 that is legitimate (free side) vs. a typo; dayparting across DST transitions; a location in a different tax jurisdiction than its org; 3,000-item menus from a large franchise; unicode and emoji in item names breaking a 40-column thermal printer; the same physical dish sold at three prices on three channels.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">A-03</span><h5>Kitchen routing &amp; KDS</h5><span class="pill p-crit">Plane A</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Turn an order into station-level work, sequence it so items finish together, and show the line what to make next.</dd>
+      <dt>Inputs</dt><dd>Confirmed orders, station map, per-item prep times, current queue depth, staffing level, promised time, courier ETA.</dd>
+      <dt>Outputs</dt><dd>Station tickets, bump/recall state, all-day counts, expo view, <span class="mono">kitchen.ticket.v1</span>, actual prep-time telemetry feeding the model.</dd>
+      <dt>Depends on</dt><dd>svc-order, svc-device, dispatch ETA, local gateway (must run on LAN alone).</dd>
+      <dt>Edge cases</dt><dd>Item spans two stations (burger + fryer) and must be coordinated; a station goes offline mid-ticket; recall after bump when the guest changes their mind; rush of 40 orders in 90 seconds; large catering order that must be sequenced around walk-ins; delivery courier arrives early and the food is not ready; delivery courier never arrives and food sits; "fire on arrival" for curbside; a ticket printed but the screen never bumped.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">A-04</span><h5>Offline gateway</h5><span class="pill p-crit">Plane A</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Guarantee a full service window with no internet, then reconcile without losing or duplicating a cent.</dd>
+      <dt>Inputs</dt><dd>Local writes from terminals/KDS, cloud inbound stream, device heartbeats, HLC timestamps.</dd>
+      <dt>Outputs</dt><dd>Durable local commits, signed outbox batches, sync status banner, reconciliation report with any variances itemized.</dd>
+      <dt>Depends on</dt><dd>Embedded Postgres, MQTT LAN bus, device certs, cloud sync endpoint.</dd>
+      <dt>Edge cases</dt><dd>Gateway hardware dies with an unsynced outbox (mitigation: terminals also retain a shadow outbox); clock jumps backward; two gateways paired to one location after a hardware swap; outbox exceeds disk; reconnect during a partial batch; a cloud-side schema migration deployed while a gateway was offline for six days; power loss mid-write; someone unplugs it to charge a phone.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">A-05</span><h5>Payments &amp; settlement</h5><span class="pill p-crit">Plane A</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Authorize, capture, refund, and pay out &mdash; with a ledger that reconciles to the penny against the processor and the bank.</dd>
+      <dt>Inputs</dt><dd>Payment intents, EMV/NFC reader results, saved tokens, tips, refund requests, processor webhooks, payout schedule.</dd>
+      <dt>Outputs</dt><dd>Captures, refunds, balanced journal entries, daily payouts, fee statements, 1099-K data, dispute packets.</dd>
+      <dt>Depends on</dt><dd>Processor (Stripe Connect / Adyen for Platforms), svc-ledger, bank rails.</dd>
+      <dt>Edge cases</dt><dd>Auth succeeds, capture fails; tip added after auth exceeds the 20% overage allowance; chargeback on an order already paid out; negative balance after refunds exceed daily volume; processor webhook arrives before the API response; duplicate webhook 48h later; cash-only day; refund of a partially loyalty-paid order (which pot gives back what?); a location closing its bank account mid-payout cycle.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">A-06</span><h5>Accounting automation</h5><span class="pill p-warn">Plane A</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Close the day automatically and hand a bookkeeper something they do not have to re-key.</dd>
+      <dt>Inputs</dt><dd>Journal entries, payouts, fees, tips, comps/voids, cash counts, labor hours, tax categories.</dd>
+      <dt>Outputs</dt><dd>Daily close packet, P&amp;L summary, sales tax accrual by jurisdiction, tip pool allocation, QuickBooks/Xero sync, variance report.</dd>
+      <dt>Depends on</dt><dd>svc-ledger, tax rate service (Avalara or internal table), payroll integration.</dd>
+      <dt>Edge cases</dt><dd>Cash drawer short by $7.14; a manager voids a settled order the next morning; multi-jurisdiction delivery where tax follows the destination; tax-exempt catering customers; tips declared vs. tips paid via card; a business day that spans 4am close; a location changing its fiscal calendar; a state changing prepared-food tax mid-quarter.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">A-07</span><h5>Hardware &amp; device management</h5><span class="pill p-warn">Plane A</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Pair, monitor, update, and remotely diagnose every terminal, printer, KDS, reader, and gateway without a truck roll.</dd>
+      <dt>Inputs</dt><dd>Pairing codes, heartbeats, printer status (paper, cover, jam), firmware manifests, network diagnostics.</dd>
+      <dt>Outputs</dt><dd>Device registry, health dashboard, staged OTA rollouts, alerts, remote reprint/test-print, RMA workflow.</dd>
+      <dt>Depends on</dt><dd>MQTT broker, cert authority, OTA channel, gateway.</dd>
+      <dt>Edge cases</dt><dd>Printer out of paper at 7pm Friday; a device on a guest Wi-Fi VLAN that blocks mDNS; a firmware update bricking a terminal mid-service (mitigation: staged rings + automatic rollback + never update during business hours); stolen terminal; two locations sharing one physical printer; ESC/POS dialect differences across printer vendors; a KDS screen that sleeps and misses tickets.</dd>
+    </dl></div>
+  </div>
+
+  <div class="prose">
+    <h3>2.B &nbsp;AI Growth Engine &mdash; Plane B</h3>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">B-01</span><h5>AI website builder</h5><span class="pill p-neu">Plane B</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Produce a fast, SEO-correct, ordering-enabled site from a restaurant's existing footprint in under ten minutes, with no design decisions required from the operator.</dd>
+      <dt>Inputs</dt><dd>Business name + address, Google Business Profile, existing site scrape, menu snapshot, uploaded/generated photography, brand colors extracted from a logo, cuisine class.</dd>
+      <dt>Outputs</dt><dd>Deployed site on a custom domain, structured page model (not raw HTML), <span class="mono">Restaurant</span>/<span class="mono">Menu</span>/<span class="mono">Offer</span> schema.org JSON-LD, sitemap, OG images, Core Web Vitals budget met, ordering deep links.</dd>
+      <dt>Depends on</dt><dd>LLM (copy + IA), image pipeline, CDN/edge renderer, svc-menu, domain/DNS automation, SSL issuance.</dd>
+      <dt>Edge cases</dt><dd>No existing web presence at all; a scraped site with wrong hours; a restaurant that shares a name with a chain; domain locked at a registrar the owner cannot access; DNS propagation during a launch promo; allergen claims hallucinated into item copy (<b>hard-blocked</b> by the claims filter); a menu with 3,000 items needing pagination and internal linking; multi-location under one brand with per-location hours and menus.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">B-02</span><h5>CRM &amp; identity resolution</h5><span class="pill p-neu">Plane B</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Collapse fragmented order history across POS, web, phone, and marketplace into one profile per human, per restaurant.</dd>
+      <dt>Inputs</dt><dd>Order records, phone/email at checkout, card fingerprints, loyalty scans, device IDs, marketplace account links, imported lists.</dd>
+      <dt>Outputs</dt><dd>Unified profiles, RFM segments, churn probability, predicted LTV, favorite items, suppression lists, audience exports.</dd>
+      <dt>Depends on</dt><dd>svc-order, svc-identity, ClickHouse, ML scoring jobs.</dd>
+      <dt>Edge cases</dt><dd>Two people sharing a phone number (household); one person with three emails; a typo'd email that matches nobody; a shared corporate card producing a false merge; a merge that must be <b>un</b>done after a complaint; a guest exercising deletion while an order is in flight; office managers ordering for 30 people (one profile, wildly non-representative behavior); a restaurant importing a purchased list with no consent record (<b>reject the import</b>).</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">B-03</span><h5>Campaign automation</h5><span class="pill p-neu">Plane B</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Run lifecycle marketing that a busy operator never has to think about, and prove incremental revenue rather than attributed revenue.</dd>
+      <dt>Inputs</dt><dd>Segments, triggers (first order, lapsed 30d, birthday, cart abandon, post-delivery), offer templates, consent + preferences, send-time model output.</dd>
+      <dt>Outputs</dt><dd>SMS/email/push sends, journey state, holdout-based incrementality reports, revenue per send, opt-out rate, deliverability health.</dd>
+      <dt>Depends on</dt><dd>svc-crm, svc-notify, Twilio/SES, offer engine, uplift model.</dd>
+      <dt>Edge cases</dt><dd>Guest is in five journeys at once (frequency cap arbitration); a 40%-off blast sent to people who would have ordered anyway (<b>this is why holdouts are mandatory</b>); quiet hours across timezones for a traveling guest; a carrier filtering the short code; a restaurant closed on the day a "come back today" offer lands; an offer redeemable at a location that has since shut; STOP received mid-journey; a birthday on Feb 29.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">B-04</span><h5>Loyalty &amp; tiers</h5><span class="pill p-crit">Plane B</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Run a cross-brand points wallet that is attractive to guests, fair to restaurants, and correctly accounted for as a liability.</dd>
+      <dt>Inputs</dt><dd>Settled orders, earn rules, tier thresholds, redemption requests, expiration policy, promotional multipliers.</dd>
+      <dt>Outputs</dt><dd>Point ledger entries, balance projection, tier state, redemption authorizations, liability balance, breakage recognition, inter-org settlement.</dd>
+      <dt>Depends on</dt><dd>svc-ledger, svc-order, svc-identity.</dd>
+      <dt>Edge cases</dt><dd><b>Points earned at restaurant A, redeemed at restaurant B</b> &mdash; who funds the discount? (Answer: a platform-operated clearing account with monthly net settlement, funded from the redeeming org at a fixed cents-per-point and credited to the earning org, with the spread as platform revenue.) Also: refund of an order that earned points already spent; tier downgrade mid-year; a restaurant leaving the platform with outstanding liability; points expiring under state escheatment law; double-earn from a duplicate sync; a guest gaming a referral loop.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">B-05</span><h5>Rewards &amp; gamification</h5><span class="pill p-off">Plane B</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Raise order frequency through streaks, challenges, and badges without degrading into a coupon race.</dd>
+      <dt>Inputs</dt><dd>Order cadence, category coverage, local-explorer signals, seasonal events, referral graph.</dd>
+      <dt>Outputs</dt><dd>Achievement grants, streak state, challenge progress, bonus point grants, shareable cards.</dd>
+      <dt>Depends on</dt><dd>svc-loyalty, svc-notify, svc-marketplace.</dd>
+      <dt>Edge cases</dt><dd>Streak broken by the restaurant being closed (grace day); a challenge that is only completable by overspending (<b>cap challenge cost as % of guest AOV</b>); collusive referral rings; a badge referencing a delisted restaurant; users gaming with $0 orders; achievements that create real liability without a budget cap.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">B-06</span><h5>Upsell engine</h5><span class="pill p-neu">Plane B</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Raise AOV at the point of decision with suggestions that are relevant, in stock, fast to prep, and high margin &mdash; in that priority order.</dd>
+      <dt>Inputs</dt><dd>Cart contents, person history, item affinities (co-purchase lift), current 86 list, station load, item margin and prep time.</dd>
+      <dt>Outputs</dt><dd>Ranked add-on slate per cart stage, bundle proposals, attach-rate telemetry, revenue lift vs. holdout.</dd>
+      <dt>Depends on</dt><dd>svc-recs, svc-menu availability, svc-kitchen load.</dd>
+      <dt>Edge cases</dt><dd>Suggesting an item that is 86'd (never &mdash; hard filter); suggesting a drink to a cart that already has four; allergen conflict with a stated preference; suggesting a 25-minute item onto a 6-minute order and blowing the promised time; upsell fatigue suppressing conversion; a bundle whose discount inverts margin.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">B-07</span><h5>AI menu optimizer</h5><span class="pill p-neu">Plane B</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Recommend price, placement, naming, and description changes that raise contribution margin, with an estimated effect and a confidence interval attached to every proposal.</dd>
+      <dt>Inputs</dt><dd>Item-level sales history, cost, prep time, modifier attach rates, competitor price scrapes, elasticity estimates, seasonality, weather.</dd>
+      <dt>Outputs</dt><dd>Ranked change proposals with projected &Delta;margin and CI, menu-engineering quadrant (star / plow-horse / puzzle / dog), rewritten item copy, A/B test plans.</dd>
+      <dt>Depends on</dt><dd>svc-menu, svc-analytics, LLM (copy), elasticity model.</dd>
+      <dt>Edge cases</dt><dd>Thin data on a new item (fall back to category priors and say so); price increases that breach a psychological threshold ($9.99&rarr;$10.49); an item whose demand is driven entirely by a lapsed promotion; regulated pricing (alcohol, combo meals in some jurisdictions); an operator who accepts 30 proposals at once and destabilizes the whole menu (<b>rate-limit to 5 changes per 14 days</b>); cost data that is stale or absent.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">B-08</span><h5>AI labor scheduling</h5><span class="pill p-off">Plane B</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Publish a schedule that matches forecast demand at target labor percentage while respecting availability and law.</dd>
+      <dt>Inputs</dt><dd>Demand forecast by 15-min bucket, staff availability, skills/stations, wage rates, labor rules, historical throughput per staff-hour.</dd>
+      <dt>Outputs</dt><dd>Draft schedule, projected labor %, overtime warnings, shift-swap marketplace, actual-vs-forecast variance.</dd>
+      <dt>Depends on</dt><dd>Forecast model, svc-tenant (staff), payroll integration.</dd>
+      <dt>Edge cases</dt><dd>Predictive-scheduling ordinances (Oregon, NYC, SF, Chicago, Philadelphia) requiring 14-day advance notice and premium pay for changes &mdash; jurisdiction rules must be a data table, not code; minors with hour restrictions; a no-show 20 minutes before open; a forecast blown by a street festival or a snowstorm; a schedule that is optimal but unfair (same person always closing).</dd>
+    </dl></div>
+  </div>
+
+  <div class="prose">
+    <h3>2.C &nbsp;Marketplace &mdash; Plane C</h3>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">C-01</span><h5>Consumer app &amp; discovery</h5><span class="pill p-neu">Plane C</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Give guests a reason to open Mobile Dinners instead of DoorDash: better prices, one wallet across every local restaurant, and honest timing.</dd>
+      <dt>Inputs</dt><dd>Location, time, person history and embedding, query text, filters, live availability and capacity.</dd>
+      <dt>Outputs</dt><dd>Ranked feed, search results, storefronts, cart, checkout, order tracking, wallet, achievements.</dd>
+      <dt>Depends on</dt><dd>svc-search, svc-recs, svc-marketplace, svc-tracking, svc-identity.</dd>
+      <dt>Edge cases</dt><dd>Empty market at launch (cold start &mdash; show pickup + a curated set, never an empty grid); guest outside every service radius; location permission denied; a restaurant that goes offline between feed render and checkout; a stale cart against a republished menu; address ambiguity in apartment complexes; a guest ordering from a different city than their saved address.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">C-02</span><h5>Listings &amp; storefronts</h5><span class="pill p-neu">Plane C</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Present each restaurant accurately &mdash; real menu, real availability, real wait &mdash; and convert.</dd>
+      <dt>Inputs</dt><dd>Menu snapshot, 86 overlay, hours + exceptions, photos, reviews, live kitchen load, fee structure.</dd>
+      <dt>Outputs</dt><dd>Storefront page, item detail with modifiers, quoted prep window, fee breakdown, "closes in 20 min" states.</dd>
+      <dt>Depends on</dt><dd>svc-menu, svc-kitchen, svc-dispatch.</dd>
+      <dt>Edge cases</dt><dd>Restaurant open but kitchen overloaded (show a longer honest wait, not "unavailable"); scheduled orders past closing; a holiday exception nobody entered; a photo showing an item that is 86'd; a menu that differs by fulfillment type; a restaurant that pauses mid-cart.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">C-03</span><h5>Cross-restaurant loyalty wallet</h5><span class="pill p-crit">Plane C</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>One balance, every participating restaurant. The consumer-facing reason the network is worth more than the sum of its restaurants.</dd>
+      <dt>Inputs</dt><dd>Settled orders across all orgs, tier state, redemption intents.</dd>
+      <dt>Outputs</dt><dd>Wallet balance and history, redeemable offers by location, tier benefits, inter-org settlement records.</dd>
+      <dt>Depends on</dt><dd>svc-loyalty, svc-ledger, svc-identity.</dd>
+      <dt>Edge cases</dt><dd>An org opting out of accepting foreign points (allowed &mdash; must be visible before checkout, not after); redemption at a location whose owner disputes the clearing rate; concurrent redemption from two devices (serializable isolation, reserve-then-commit); points from a refunded order already spent; a guest in a market with only one participating restaurant (wallet feels pointless &mdash; gate the pitch on market density).</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">C-04</span><h5>Real-time order tracking</h5><span class="pill p-neu">Plane C</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Show the guest true state &mdash; and specifically not a fake progress bar that advances on a timer.</dd>
+      <dt>Inputs</dt><dd>Order events, kitchen ticket state, courier assignment and location, traffic.</dd>
+      <dt>Outputs</dt><dd>Live status, map with courier position, revised ETA with reason, delivery photo, rating prompt.</dd>
+      <dt>Depends on</dt><dd>svc-tracking, svc-dispatch, svc-kitchen, WebSocket infra.</dd>
+      <dt>Edge cases</dt><dd>Courier phone loses signal in a parking garage (show last-known + timestamp, never a frozen dot pretending to be live); ETA slipping repeatedly (notify once with a reason, then stop); guest closes the app (push handles the rest); driver takes a personal detour (privacy vs. transparency &mdash; coarse position only); delivered-but-not-received disputes; a batched delivery where the guest is second.</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">C-05</span><h5>Dispatch &amp; driver network</h5><span class="pill p-crit">Plane C</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Get food from kitchen to door at a cost the model supports, using the cheapest adequate supply source available.</dd>
+      <dt>Inputs</dt><dd>Ready-time prediction, courier positions and states, order geography, batching constraints, pay model, third-party quotes.</dd>
+      <dt>Outputs</dt><dd>Assignments and offers, batches, routes, ETAs, courier payouts, cost-per-delivery telemetry.</dd>
+      <dt>Depends on</dt><dd>svc-kitchen, courier APIs, Redis geo, routing engine (OSRM/Valhalla or Mapbox).</dd>
+      <dt>Edge cases</dt><dd>No courier accepts (escalate pay in steps, then fall back to third party, then offer the guest pickup with a credit); courier accepts then abandons; restaurant is 25 minutes late and the courier is waiting (compensate wait time or lose supply); rain spikes demand and collapses supply simultaneously; multi-unit apartment with no access code; a batched order where restaurant #2 is late; a courier marking delivered from three blocks away (geofence + photo required).</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">C-06</span><h5>Personalized recommendations</h5><span class="pill p-neu">Plane C</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Make the second and third order happen without a discount.</dd>
+      <dt>Inputs</dt><dd>Behavioral events, order history, embeddings, context (time, weather, day, location), exploration policy.</dd>
+      <dt>Outputs</dt><dd>Feed slates, "order again" rails, item-level suggestions, notification-worthy moments.</dd>
+      <dt>Depends on</dt><dd>Feature store, model serving, svc-search.</dd>
+      <dt>Edge cases</dt><dd>Brand-new user with zero history; a user whose only order was a one-off catering job; over-personalization producing a feed of the same three restaurants (diversity constraint); recommending a place that is closed or out of range; dietary constraints stated once and then violated (<b>hard filter, not a ranking feature</b>); a model outage (fall back to popularity-by-hex, never an error state).</dd>
+    </dl></div>
+  </div>
+
+  <div class="spec">
+    <header><span class="id">C-07</span><h5>Ratings, reviews &amp; trust</h5><span class="pill p-off">Plane C</span></header>
+    <div class="body"><dl>
+      <dt>Purpose</dt><dd>Give guests signal and operators feedback, while separating food quality from delivery performance &mdash; a distinction every aggregator gets wrong and every restaurant resents.</dd>
+      <dt>Inputs</dt><dd>Post-order prompts, order + delivery telemetry, photos, operator responses.</dd>
+      <dt>Outputs</dt><dd>Two independent scores (food, delivery), verified-order badges, sentiment themes, operator response workflow, fraud flags.</dd>
+      <dt>Depends on</dt><dd>svc-order, svc-dispatch, moderation model.</dd>
+      <dt>Edge cases</dt><dd>A 1-star for a late delivery on a restaurant that had the food ready in 6 minutes (<b>never counted against the restaurant</b>); review bombing by a competitor; a review of an order that was never placed; extortion ("refund me or I post"); a legitimate complaint about an allergen incident that requires escalation, not moderation; an operator response revealing guest PII.</dd>
+    </dl></div>
+  </div>
+</section>

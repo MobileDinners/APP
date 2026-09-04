@@ -1,0 +1,398 @@
+
+<section id="s06">
+  <div class="chit">
+    <div class="meta"><span><b>MD-06</b></span><span>Interfaces</span><span>Section 06 of 10</span><span>8 screens</span></div>
+    <h2>Interface specifications</h2>
+    <p class="lede">Wireframes with the states that matter. Two design laws govern everything here: <b>operator screens are read at arm's length under time pressure</b>, and <b>guest screens must never lie about time</b>.</p>
+  </div>
+
+  <div class="prose">
+    <h3>6.1 &nbsp;Restaurant dashboard &mdash; the morning screen</h3>
+    <p>The default view answers three questions in under five seconds: <em>Is anything broken right now? How did yesterday go? What should I do today?</em> Everything else is one click away. Metric cards carry a sparkline and a comparison, never a bare number &mdash; a number without context produces no decision.</p>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 06.1 &mdash; Operator dashboard, default state</span><b>MD-UI-601</b></div>
+<pre>
+ ┌──────────────────────────────────────────────────────────────────────────────────────┐
+ │ ◎ Mobile Dinners   <b>Sunrise Taqueria ▾</b>   Main St ▾        Tue Sep 2 · 9:14am   ⚙ ▾ │
+ ├────────────┬─────────────────────────────────────────────────────────────────────────┤
+ │            │  ┌─ <i>NEEDS YOU</i> ────────────────────────────────────────────────────┐   │
+ │ ▸ Today    │  │ ⚠ <b>Printer 2 (Fry) offline 14 min</b>              [Diagnose] [Ignore]│   │
+ │ ▸ Orders   │  │ ● 3 menu items 86'd since open                    [Review]      │   │
+ │ ▸ Menu     │  │ ● Payout $4,182.11 lands tomorrow                 [Details]     │   │
+ │ ▸ Customers│  └─────────────────────────────────────────────────────────────────┘   │
+ │ ▸ Marketing│                                                                        │
+ │ ▸ Loyalty  │  ┌────────────┬────────────┬────────────┬────────────┐                 │
+ │ ▸ Website  │  │ SALES      │ ORDERS     │ AVG TICKET │ ON-TIME    │                 │
+ │ ▸ Reports  │  │ <b>$3,847</b>    │ <b>142</b>        │ <b>$27.09</b>     │ <b>94%</b>        │                 │
+ │ ▸ Staff    │  │ ▲8.2% wow  │ ▲3.1% wow  │ ▲4.9% wow  │ ▼2 pts     │                 │
+ │ ▸ Devices  │  │ ▁▂▃▅▄▆█▇   │ ▂▃▄▄▅▆▇█   │ ▃▃▄▅▅▆▆▇   │ ███████▇   │                 │
+ │            │  └────────────┴────────────┴────────────┴────────────┘                 │
+ │ ─────────  │                                                                        │
+ │ ⚡ AI (3)   │  ┌─ <i>LIVE — 6 open orders</i> ──────────────┬─ <i>AI SUGGESTIONS</i> ─────────┐   │
+ │            │  │ #1847  Delivery   ▓▓▓▓▓▓░░  8m    │ ▸ Raise Chicken Bowl      │   │
+ │            │  │ #1848  Pickup     ▓▓▓░░░░░  3m    │   $13.50 → $14.25         │   │
+ │            │  │ #1849  Delivery   ▓▓▓▓▓▓▓▓ <i>LATE</i>  │   +$412/mo · MEDIUM conf │   │
+ │            │  │ #1850  Dine-in    ▓░░░░░░░  1m    │   [Accept] [Test] [Skip]  │   │
+ │            │  │ #1851  Delivery   ▓▓░░░░░░  2m    │ ─────────────────────────  │   │
+ │            │  │ #1852  Pickup     ▓▓▓▓░░░░  4m    │ ▸ 61 guests lapsed 30d    │   │
+ │            │  │                     [Open KDS ▸]  │   Win-back: +$1,840 est.  │   │
+ │            │  └───────────────────────────────────┴───────────────────────────┘   │
+ │            │                                                                        │
+ │            │  ┌─ SALES BY HOUR ─────────────────────────────────────────────────┐   │
+ │            │  │     ▁▁▂▄███▆▃▂▁▁▂▃▅███▇▄▂                                       │   │
+ │            │  │     11a  12p  1p  2p  3p  4p  5p  6p  7p  8p  9p                │   │
+ │            │  │     ░ = forecast    █ = actual    <i>red band = understaffed</i>      │   │
+ │            │  └─────────────────────────────────────────────────────────────────┘   │
+ └────────────┴─────────────────────────────────────────────────────────────────────────┘
+
+ STATES · empty (pre-first-order: setup checklist replaces metrics)
+        · degraded (a subsystem down: banner names it and says what still works)
+        · offline (cloud unreachable: "Running locally — 12 orders queued", never a spinner)
+        · multi-location (metric cards aggregate; a location selector switches scope)
+
+ DESIGN NOTES
+  · NEEDS YOU is the only red on the screen. If everything is fine, the block collapses
+    to a single green line. Alert fatigue is the failure mode; three items is the cap.
+  · Sparklines are 7-day, same-weekday-aligned. Week-over-week, never day-over-day —
+    restaurant volume is weekday-periodic and DoD comparisons are noise.
+  · AI suggestions live in a fixed rail, never as an interstitial or a modal. They are
+    an offer, not an interruption.
+  · Touch targets ≥ 44px throughout: this is used on a tablet, on a prep counter,
+    by someone holding a phone in the other hand.
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>6.2 &nbsp;Kitchen display</h3>
+    <p>The most latency- and legibility-critical screen in the system. Read from 5&ndash;8 feet, in heat and steam, by someone who cannot touch it with clean hands. Everything is oversized, high-contrast, and colored by <em>time remaining against the promise</em> &mdash; not by status.</p>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 06.2 &mdash; KDS, expo view</span><b>MD-UI-602</b></div>
+<pre>
+ ┌──────────────────────────────────────────────────────────────────────────────────────┐
+ │  GRILL   FRY   ASSEMBLY   <b>[EXPO]</b>          6 OPEN   avg 8:12   <i>LATE 1</i>      7:41 PM │
+ ├──────────────────┬──────────────────┬──────────────────┬──────────────────────────────┤
+ │ <i>#1849  12:04</i>     │ <b>#1847   8:22</b>     │ #1850   1:10     │ #1851   2:31                │
+ │ <i>DELIVERY · LATE</i> │ <b>DELIVERY</b>         │ DINE-IN  T4      │ DELIVERY                    │
+ │ <i>driver waiting</i>  │ <b>driver 3 min out</b> │                  │ courier not assigned        │
+ │ ───────────────  │ ───────────────  │ ───────────────  │ ───────────────             │
+ │ 2× Al Pastor     │ 1× Carne Bowl    │ 3× Street Taco   │ 1× Veggie Burrito           │
+ │   no onion       │   extra salsa    │   ▸ 1 no cilantro│   add guac                  │
+ │ 1× Horchata      │ 1× Chips + Queso │ 1× Agua Fresca   │ 1× Chips                    │
+ │                  │                  │                  │                             │
+ │ ▓▓▓▓▓▓▓▓▓▓ <i>+2:04</i>│ ▓▓▓▓▓▓▓▓░░ 0:38  │ ▓▓░░░░░░░░ 5:50  │ ▓▓▓░░░░░░░ 4:29             │
+ │ [  BUMP  ]       │ [  BUMP  ]       │ [  BUMP  ]       │ [  BUMP  ]                  │
+ └──────────────────┴──────────────────┴──────────────────┴──────────────────────────────┘
+      RECALL ◂        ALL-DAY: Al Pastor 14 · Carne 9 · Veggie 6 · Taco 22      ▸ 86 ITEM
+
+ COLOR = TIME AGAINST PROMISE, nothing else
+   normal (>2 min headroom) · <b>warning (<2 min)</b> · <i>late (past promise)</i>
+   Courier-waiting state is shown on the ticket itself, because a waiting driver
+   is the single most expensive状 state in the system.
+
+ INTERACTIONS · bump = large tap or a physical bump bar · recall restores with
+   full history · long-press an item to 86 it (propagates to marketplace in <20s)
+   · no confirmation dialogs anywhere: every action is undoable instead
+ CONSTRAINTS · must render from the LAN with zero internet · never sleeps ·
+   survives a 14-hour session without a reload · audible alert on new + on late
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>6.3 &nbsp;Customer marketplace</h3>
+    <p>The feed's job is to defeat the "just open DoorDash" reflex. Two things do that: prices that are visibly the same as in-store, and a points balance that is worth something across the whole city.</p>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 06.3 &mdash; Marketplace feed (mobile)</span><b>MD-UI-603</b></div>
+<pre>
+ ┌────────────────────────────────┐
+ │ ◎  742 Elm St ▾           ⌕  ◉ │
+ ├────────────────────────────────┤
+ │ ┌────────────────────────────┐ │
+ │ │ <b>2,847 points</b>   Gold · 6 to │ │  ← wallet strip, always visible.
+ │ │ ≈ $28 anywhere    platinum │ │    "anywhere" is the whole product.
+ │ └────────────────────────────┘ │
+ │                                │
+ │ [Delivery] [Pickup]  Now ▾     │
+ │ ⊙All ⊙Tacos ⊙Pizza ⊙Thai ⊙…    │
+ │                                │
+ │ <b>Order again</b>                  │
+ │ ┌──────────┐ ┌──────────┐      │
+ │ │ [photo]  │ │ [photo]  │      │
+ │ │ Sunrise  │ │ Noodle   │      │
+ │ │ Taqueria │ │ Bar      │      │
+ │ │ 18–24 min│ │ 22–30 min│      │
+ │ │ $0.99 dlv│ │ $1.49 dlv│      │
+ │ └──────────┘ └──────────┘      │
+ │                                │
+ │ <b>Ready fast near you</b>           │
+ │ ┌────────────────────────────┐ │
+ │ │ [photo]                    │ │
+ │ │ <b>Bao Haus</b>          4.7 ★    │ │
+ │ │ Chinese · $$ · 0.8 mi      │ │
+ │ │ <b>12–18 min</b> · $0.99 delivery │ │
+ │ │ ⚡ Kitchen is quiet right now│ │  ← live capacity, from the KDS.
+ │ │ ◈ Earns 2× points today    │ │    Nobody else can show this.
+ │ └────────────────────────────┘ │
+ │                                │
+ │ ┌────────────────────────────┐ │
+ │ │ [photo]        <i>Sponsored</i>   │ │  ← labeled, never blended,
+ │ │ <b>Ellery's Grill</b>       4.5 ★ │ │    suppressed below a relevance
+ │ │ American · $$ · 1.4 mi     │ │    floor. Max 1 per 10 cards.
+ │ └────────────────────────────┘ │
+ ├────────────────────────────────┤
+ │  ⌂ Feed  ⌕ Search  ◈ Wallet  ☺ │
+ └────────────────────────────────┘
+
+ STATES · cold start (no history): "Popular near 742 Elm" + cuisine chooser,
+           never an empty grid
+        · thin market (<8 restaurants): pickup-first layout, delivery de-emphasized
+        · everything closed: scheduled-order mode, "Open at 11am" with a set-reminder CTA
+        · out of range: nearest pickup options + a waitlist signup for the area
+ HONESTY RULES · ranges, never point estimates ("18–24 min", not "21 min")
+        · all fees shown on the card, no reveal at checkout
+        · "Kitchen is busy — 35–45 min" is shown rather than hiding a slow restaurant
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>6.4 &nbsp;Checkout</h3>
+    <p>Every fee is visible before the guest commits. The competitive claim of this product is price honesty; a hidden service fee revealed on the last screen destroys it permanently, and no growth metric is worth that.</p>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 06.4 &mdash; Checkout</span><b>MD-UI-604</b></div>
+<pre>
+ ┌────────────────────────────────┐
+ │ ‹  Checkout                    │
+ ├────────────────────────────────┤
+ │ <b>Sunrise Taqueria</b>              │
+ │ 2 items · ready ~8 min         │
+ │ ─────────────────────────────  │
+ │ 2× Al Pastor Tacos      $13.00 │
+ │    no onion                    │
+ │ 1× Horchata              $3.50 │
+ │ ─────────────────────────────  │
+ │ <b>ADD TO YOUR ORDER</b>              │  ← upsell: in stock, fast, high
+ │ ┌──────┐┌──────┐┌──────┐       │    margin, and it does <i>not</i> extend
+ │ │Chips ││Queso ││Churro│       │    the promised time. Never shown
+ │ │$2.50 ││$3.00 ││$3.50 │       │    if it would push past the promise.
+ │ └──────┘└──────┘└──────┘       │
+ │ ─────────────────────────────  │
+ │ ◉ Delivery  ○ Pickup           │
+ │ 742 Elm St, Apt 4B        Edit │
+ │ "Buzzer broken, call me"       │
+ │ ─────────────────────────────  │
+ │ ◈ Use 1,400 points      −$14.00│  ← toggle, shows the exact dollar
+ │   Balance after: 1,447         │    value. Points math is never hidden.
+ │ ─────────────────────────────  │
+ │ Subtotal                 $16.50│
+ │ Delivery                  $0.99│
+ │ Service fee               $0.00│  ← literally zero, and shown as zero
+ │ Tax                       $1.44│
+ │ Points applied          −$14.00│
+ │ Driver tip   [15][<b>20</b>][25][ $ ]│  ← default 20%, always adjustable,
+ │                           $3.30│    tip goes 100% to the driver and
+ │ ─────────────────────────────  │    the screen says so.
+ │ <b>Total                    $8.23</b>│
+ │                                │
+ │ 100% of the food total goes to │
+ │ Sunrise Taqueria.              │  ← the thesis, restated at the moment
+ │ ─────────────────────────────  │    of payment.
+ │ [   Pay $8.23 with  Pay   ]    │
+ │ Arrives 8:04–8:14 PM           │
+ └────────────────────────────────┘
+
+ EDGE STATES · item 86'd while in cart → inline swap suggestion, price held
+        · restaurant paused → "Closed for orders. Nearby and open:" with 3 options
+        · points balance changed on another device → re-quote with a clear diff
+        · payment declined → keep the cart intact, offer another method, never dump
+        · price drift vs. menu_version → re-quote with the change itemized
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>6.5 &nbsp;Delivery tracking</h3>
+  </div>
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 06.5 &mdash; Live tracking</span><b>MD-UI-605</b></div>
+<pre>
+ ┌────────────────────────────────┐
+ │ ‹  Order #1847                 │
+ ├────────────────────────────────┤
+ │ ┌────────────────────────────┐ │
+ │ │        [ live map ]        │ │
+ │ │   ◉ restaurant             │ │
+ │ │      ╲                     │ │
+ │ │       ╲── ▲ Marcus         │ │
+ │ │            ╲               │ │
+ │ │             ◈ you          │ │
+ │ └────────────────────────────┘ │
+ │                                │
+ │ <b>Arriving 8:04 – 8:14 PM</b>       │
+ │ Marcus is 4 minutes away       │
+ │                                │
+ │ ● Order placed          7:38   │
+ │ ● Kitchen started       7:41   │
+ │ ● Food ready            7:52   │
+ │ ● Picked up             7:55   │
+ │ ◉ <b>On the way</b>                  │
+ │ ○ Delivered                    │
+ │                                │
+ │ ┌────────────────────────────┐ │
+ │ │ ▲ <b>Marcus C.</b>      4.9 ★     │ │
+ │ │   Silver Civic · 8KJ 221   │ │
+ │ │   [ Message ]  [ Call ]    │ │  ← masked number, both directions
+ │ └────────────────────────────┘ │
+ │                                │
+ │ 2 items · $8.23        Receipt │
+ └────────────────────────────────┘
+
+ THE RULES THAT MAKE THIS DIFFERENT
+  · Every timestamp is real. The bar advances on events, never on a timer.
+  · ETA is a <b>range</b>, and it widens rather than sliding silently. If it slips,
+    the guest is told once, with a reason ("kitchen is backed up"), not four times.
+  · Signal loss shows "Last updated 2 min ago" over a static marker. A moving dot
+    that isn't real is a lie the guest will eventually catch.
+  · Courier position is coarsened near the delivery address; the guest's exact
+    location is never exposed to the courier beyond the drop instruction.
+  · Batched deliveries say so: "One stop before yours." Hiding it is how trust dies.
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>6.6 &nbsp;Loyalty &amp; wallet</h3>
+  </div>
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 06.6 &mdash; Guest wallet</span><b>MD-UI-606</b></div>
+<pre>
+ ┌────────────────────────────────┐        DESIGN INTENT
+ │ ◈ Wallet                       │        ─────────────────────────────────
+ ├────────────────────────────────┤        The balance is expressed in DOLLARS
+ │        <b>2,847</b>                   │        first and points second. "2,847
+ │        points  ≈ <b>$28.47</b>         │        points" means nothing; "$28.47
+ │  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░  Gold    │        anywhere" means dinner.
+ │  6 more orders to Platinum     │
+ ├────────────────────────────────┤        Tier progress is stated in ORDERS,
+ │ <b>Redeem near you</b>                 │        not dollars — it is the behavior
+ │ ┌────────────────────────────┐ │        the platform actually wants.
+ │ │ Bao Haus                   │ │
+ │ │ Free bao · 400 pts     [→] │ │        The redeem list is geo-sorted and
+ │ ├────────────────────────────┤ │        shows only what is redeemable RIGHT
+ │ │ Sunrise Taqueria           │ │        NOW at an open store within range.
+ │ │ $10 off $25 · 1,000    [→] │ │        A reward you cannot use is worse
+ │ ├────────────────────────────┤ │        than no reward.
+ │ │ Noodle Bar                 │ │
+ │ │ Free delivery · 250    [→] │ │
+ │ └────────────────────────────┘ │        ACHIEVEMENTS are capped in cost and
+ ├────────────────────────────────┤        never require overspending. Streaks
+ │ <b>Achievements</b>          4 of 18  │        get one grace day per month because
+ │ ◈ Neighborhood Regular  ✓      │        restaurants close and guests travel.
+ │ ◈ Tried 5 cuisines      ✓      │
+ │ ◈ Early Bird (3 breakfast) 2/3 │        HISTORY shows earning org, spending
+ │ ◈ Weekend Streak        ✓      │        org, and expiry per lot. Ambiguity
+ ├────────────────────────────────┤        about points is a support ticket
+ │ <b>History</b>                        │        generator; make it boring and exact.
+ │ +142  Sunrise Taqueria  Sep 1  │
+ │ −400  Bao Haus          Aug 28 │        Expiry warnings at 60/30/7 days, and
+ │ +89   Noodle Bar        Aug 24 │        never as the first notification a
+ │ 1,200 pts expire Nov 14   ⓘ    │        guest receives that month.
+ └────────────────────────────────┘
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>6.7 &nbsp;CRM &mdash; operator view</h3>
+  </div>
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 06.7 &mdash; Customers</span><b>MD-UI-607</b></div>
+<pre>
+ ┌──────────────────────────────────────────────────────────────────────────────────────┐
+ │ Customers                                        1,847 total · 612 active (90d)      │
+ ├──────────────────────────────────────────────────────────────────────────────────────┤
+ │ ┌ SEGMENTS ─────────────┐  ┌ VALUE DISTRIBUTION ──────────────────────────────────┐  │
+ │ │ ● Champions      142  │  │  ██                                                  │  │
+ │ │ ● Loyal          389  │  │  ████                                                │  │
+ │ │ ● At risk        211  │  │  ███████                                             │  │
+ │ │ ● Lapsed         604  │  │  ███████████                                         │  │
+ │ │ ● New            501  │  │  $0    $50   $150   $400   $1k+   lifetime value     │  │
+ │ │ + Custom segment      │  │  <i>Top 8% of guests = 41% of revenue</i>                   │  │
+ │ └───────────────────────┘  └──────────────────────────────────────────────────────┘  │
+ │                                                                                      │
+ │ ┌ AT RISK · 211 guests ────────────────────── [ Create win-back campaign → ] ──────┐ │
+ │ │ NAME             LAST ORDER   ORDERS   LTV      CHURN   FAVORITE                 │ │
+ │ │ M. Okonkwo       34 days      18      $612     <b>0.71</b>   Al Pastor Tacos          │ │
+ │ │ D. Ramirez       41 days      12      $389     <b>0.68</b>   Carne Bowl               │ │
+ │ │ S. Lindqvist     29 days       9      $301     0.54    Veggie Burrito            │ │
+ │ │ …                                                                                │ │
+ │ └──────────────────────────────────────────────────────────────────────────────────┘ │
+ │                                                                                      │
+ │ ┌ PROFILE — M. Okonkwo ────────────────────────────────────────────────────────────┐ │
+ │ │ 18 orders · $612 lifetime · $34 avg · first order Mar 4                           │ │
+ │ │ Cadence: every 11 days → <b>now 34 days</b> · Gold tier · 1,240 pts                    │ │
+ │ │ Channels: 12 pickup · 6 delivery · never dine-in                                  │ │
+ │ │ Always orders: Al Pastor (17×), no onion (17×) — <i>preference, treat as a rule</i>    │ │
+ │ │ Consent: SMS ✓ (Mar 4) · Email ✓ (Mar 4) · Push ✗                                 │ │
+ │ │ Last campaign: "Lapsed 30d" sent Aug 28 — not opened                              │ │
+ │ │ [ Send offer ]  [ Add note ]  [ Export ]  [ Delete data ]                          │ │
+ │ └──────────────────────────────────────────────────────────────────────────────────┘ │
+ └──────────────────────────────────────────────────────────────────────────────────────┘
+
+ PRIVACY BOUNDARIES ENFORCED IN THIS UI
+  · Cross-brand behavior is NEVER shown here. An operator sees their own relationship
+    only. Network-level insight appears only as anonymized cohort stats, min n = 25.
+  · Consent state is displayed with its timestamp on every profile; a guest without
+    consent cannot be selected into a marketing audience — the checkbox is disabled,
+    with the reason on hover, rather than silently dropped at send time.
+  · "Delete data" runs a real DSAR cascade across Postgres, ClickHouse, and the
+    feature store, and returns a receipt.
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>6.8 &nbsp;AI website builder</h3>
+  </div>
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 06.8 &mdash; Site builder</span><b>MD-UI-608</b></div>
+<pre>
+ ┌──────────────────────────────────────────────────────────────────────────────────────┐
+ │ Website        sunrisetaqueria.com  <span>●</span> Live      [ Preview ] [ Publish ]           │
+ ├──────────────────────────┬───────────────────────────────────────────────────────────┤
+ │ SECTIONS                 │                    [ desktop | <b>mobile</b> ]                    │
+ │ ⠿ Hero            ●      │   ┌─────────────────────────────────────────────┐         │
+ │ ⠿ Order now       ●      │   │                                             │         │
+ │ ⠿ Menu            ●      │   │        [ hero image — real photo ]          │         │
+ │ ⠿ About           ○      │   │                                             │         │
+ │ ⠿ Reviews         ●      │   │     <b>Sunrise Taqueria</b>                        │         │
+ │ ⠿ Hours + map     ●      │   │     Al pastor, off the trompo, since 2011   │         │
+ │ ⠿ Catering        ○      │   │                                             │         │
+ │ + Add section            │   │     [  Order pickup  ] [  Delivery  ]       │         │
+ │                          │   │     Open until 10pm · 12–18 min             │         │
+ │ ─────────────────────    │   │                                             │         │
+ │ <b>AI ASSIST</b>                │   └─────────────────────────────────────────────┘         │
+ │ "make the hero warmer"   │                                                           │
+ │ "add a catering section" │   ┌─ SEO HEALTH ──────────────────────────────┐           │
+ │ [                     ▸] │   │ ✓ Title, meta, OG            ✓ Sitemap    │           │
+ │                          │   │ ✓ Restaurant + Menu schema   ✓ SSL        │           │
+ │ ─────────────────────    │   │ ✓ LCP 1.2s  CLS 0.01  INP 90ms            │           │
+ │ THEME                    │   │ ✓ Google Business Profile linked          │           │
+ │ ▨ Ember  ▨ Slate  ▨ Masa │   │ ⚠ 4 items missing photos      [ Fix → ]   │           │
+ │ Aa Archivo / Newsreader  │   │ ⚠ No reviews embedded         [ Fix → ]   │           │
+ └──────────────────────────┴───────────────────────────────────────────────┴───────────┘
+
+ HOW THIS DIFFERS FROM A GENERIC AI SITE BUILDER
+  · It edits a <b>structured page model</b>, not raw HTML. "Add a catering section" inserts a
+    typed section with real fields, so the site stays valid, fast, and re-themeable.
+  · The menu is <b>live-bound</b> to the menu of record. Publishing a price in the POS updates
+    the website in under 20 seconds. There is no second copy of the menu to go stale.
+  · SEO is a checklist with fixes attached, not a score. Every warning has a one-click action.
+  · Every generated string passes the claims filter before it can be published.
+  · Ordering is native to the page — no redirect to a third-party ordering domain, which is
+    what costs conversion and SEO authority on every competing product.
+</pre>
+  </div>
+</section>

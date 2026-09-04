@@ -1,0 +1,256 @@
+
+<section id="s05">
+  <div class="chit">
+    <div class="meta"><span><b>MD-05</b></span><span>Flows</span><span>Section 05 of 10</span><span>7 flows + failure branches</span></div>
+    <h2>User flows</h2>
+    <p class="lede">Each flow is specified with its happy path, its measured target, and the branch that actually happens &mdash; the failure branch is where the product is won or lost.</p>
+  </div>
+
+  <div class="prose">
+    <h3>5.1 &nbsp;Restaurant onboarding</h3>
+    <p>The single most important flow in the company. Every hour of onboarding friction is a percentage point of activation. Target: <strong>a live storefront in 20 minutes, a live POS in one scheduled session.</strong></p>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 05.1 &mdash; Restaurant onboarding</span><b>MD-FLOW-501</b></div>
+<pre>
+ STEP                        SYSTEM DOES                          TARGET     FAILURE BRANCH
+ ─────────────────────────────────────────────────────────────────────────────────────────
+ 1  Enter restaurant name    Google Places autocomplete →          20s        Not found → manual
+    + address                pulls hours, phone, photos, reviews              address entry
+                                                                              │
+ 2  <b>Menu ingestion</b>          Three paths, all AI-assisted:         3 min      All three fail →
+                             a) POS API (Toast/Square/Clover)                 assisted onboarding
+                             b) Website scrape → LLM structuring              call, MD staff types
+                             c) Photo of a printed menu → vision              it. <i>Never let menu
+                                                                              entry block signup.</i>
+ 3  <b>Human confirms prices</b>   Side-by-side diff view. Every price   4 min      Operator abandons →
+                             must be explicitly confirmed.                    save draft, SMS
+                             <i>AI never silently sets a price.</i>              resume link at +2h
+                                                                              │
+ 4  Brand extraction         Logo upload → palette + type          30s        No logo → cuisine-
+                             extraction → 3 site directions                   based default theme
+                                                                              │
+ 5  <b>Site generated</b>          LLM writes copy, assembles pages,     90s        Generation error →
+                             injects schema.org, builds sitemap,              template fallback,
+                             deploys to *.mobiledinners.site                  flagged for review
+                                                                              │
+ 6  Preview + edit           Live inline editor, section reorder   3 min      —
+                                                                              │
+ 7  Payments connect         Processor hosted onboarding           4 min      KYC pending →
+                             (KYC/KYB, bank verification)                     site goes live in
+                                                                              <i>pickup-only, pay-at-
+                                                                              store mode</i>. Do not
+                                                                              hold the launch.
+ 8  Domain                   Buy new, or guided DNS for existing   2 min      Registrar locked →
+                             Auto SSL, auto www redirect                      subdomain now,
+                                                                              reminder task
+ 9  <b>GO LIVE — storefront</b>    Ordering enabled, GBP link updated,   —          —
+                             marketplace listing queued for review
+ ─────────────────────────────────────────────────────────────────────────────────────────
+    ▼ ASYNC TRACK (does not block go-live)
+ 10 Hardware ship            Terminal + printer + gateway         2–5 days   —
+ 11 <b>POS cutover session</b>      Scheduled 90-min call, always on a    90 min     Abort criteria
+                             Tue/Wed morning, never Fri/Sat.                  defined up front;
+                             Old POS stays powered until close.               rollback in &lt;10 min
+ 12 Staff training           In-app interactive, 6 min per role   —          —
+ 13 Marketplace listing      Photo QA, menu QA, service area      1–2 days   Rejected → checklist
+                             check, test order                                with specific fixes
+ 14 <b>First campaign armed</b>     Welcome + lapsed journeys enabled     —          Requires consented
+                             with defaults                                    list; empty list →
+                                                                              QR table-tent kit
+</pre>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Onboarding rule</span>
+    <p>Steps 1&ndash;9 must never depend on steps 10&ndash;14. A restaurant that signs up on Monday should be taking online orders on its own domain on Monday, before hardware ships and before the marketplace review completes. Coupling the fast path to the slow path is the most common way a vertical SaaS company converts a signup into a refund.</p>
+  </div>
+
+  <div class="prose">
+    <h3>5.2 &nbsp;Customer onboarding</h3>
+  </div>
+  <div class="tw bleed">
+    <table>
+      <thead><tr><th>Step</th><th>What happens</th><th>Friction control</th><th>Failure branch</th></tr></thead>
+      <tbody>
+        <tr><td>Entry</td><td>App install, QR at table, storefront link, or a shared order link</td><td>Every path lands on a real menu, never a signup wall</td><td>&mdash;</td></tr>
+        <tr><td>Location</td><td>Prompt only after showing a default city feed</td><td>Ask when the value is visible, not on cold launch</td><td>Denied &rarr; manual address entry, feed still works</td></tr>
+        <tr><td>Browse + cart</td><td>Fully anonymous; cart persisted to device</td><td>Zero account required to reach checkout</td><td>&mdash;</td></tr>
+        <tr><td>Checkout identity</td><td>Phone + OTP only. Name and email collected <em>after</em> the order is placed.</td><td>One field, one code</td><td>OTP not delivered &rarr; voice call fallback, then email</td></tr>
+        <tr><td>Payment</td><td>Apple Pay / Google Pay first, card entry second</td><td>Wallet is ~2 taps</td><td>Wallet unavailable &rarr; card form with autofill</td></tr>
+        <tr><td>Account materialization</td><td>Guest order retroactively linked to a person record on OTP verify; points granted immediately</td><td>The reward for identifying yourself is visible on the confirmation screen</td><td>Number already exists &rarr; merge, show combined history</td></tr>
+        <tr><td>Consent</td><td>Granular, separate toggles for transactional (implied), marketing SMS, marketing email &mdash; unchecked by default</td><td>Never bundled into "continue"</td><td>Declined &rarr; transactional only, permanently respected</td></tr>
+        <tr><td>Retention hook</td><td>Post-order: points earned, tier progress, and one nearby restaurant that accepts the same points</td><td>Shows the network value at the moment of peak satisfaction</td><td>Only one restaurant in market &rarr; suppress the cross-brand card entirely</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <h3>5.3 &nbsp;Ordering &mdash; end to end</h3>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 05.2 &mdash; Marketplace order sequence</span><b>MD-FLOW-502</b></div>
+<pre>
+ Guest        Marketplace     svc-order      svc-payment     Gateway/POS      KDS      Dispatch
+   │              │               │               │              │             │          │
+   │─ browse ────▶│               │               │              │             │          │
+   │◀ feed ───────│  (ranked, availability-filtered, honest ETA) │             │          │
+   │              │               │               │              │             │          │
+   │─ add item ──▶│─ price check against menu_version ──────────▶ │             │          │
+   │◀ cart ───────│  <i>server-authoritative totals</i>                │             │          │
+   │              │               │               │              │             │          │
+   │─ checkout ──▶│─ QUOTE ──────▶│               │              │             │          │
+   │              │               │─ fees, tax, points, ETA ────▶│             │          │
+   │◀ quote ──────│◀──────────────│               │              │             │          │
+   │              │               │               │              │             │          │
+   │─ COMMIT ────▶│─ create(idem_key) ───────────▶│              │             │          │
+   │              │               │─ auth ───────▶│              │             │          │
+   │              │               │◀ authorized ──│              │             │          │
+   │              │               │─ CONFIRMED ─────────────────▶│             │          │
+   │◀ confirmed ──│               │               │              │─ ticket ───▶│          │
+   │  <b>&lt;1.5s p99 from tap to ticket on the line</b>                  │             │          │
+   │              │               │───────────────────────────────────────────────────────▶│
+   │              │               │            (dispatch pre-assigns on ready_time forecast,
+   │              │               │             not on ready — courier arrives as food does)
+   │              │               │               │              │             │          │
+   │◀ push: "in the kitchen" ─────│               │              │             │─ offer ─▶│
+   │              │               │               │              │             │◀ accept ─│
+   │              │               │◀ READY ──────────────────────│◀ bump ──────│          │
+   │◀ push: "picked up" ──────────│               │              │             │          │
+   │◀ live map (WS, 5s) ──────────│               │              │             │          │
+   │◀ delivered + photo ──────────│               │              │             │          │
+   │              │               │─ capture + tip ─────────────▶│             │          │
+   │              │               │─ journal entries + points grant             │          │
+   │◀ receipt, points earned, rate food / rate delivery separately │            │          │
+
+ CRITICAL PATH BUDGET (tap → ticket):
+   auth 400ms · order write 60ms · event publish 20ms · gateway push 150ms ·
+   KDS render 80ms · slack 790ms  ────────────────────────────────  p99 = 1,500ms
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>5.4 &nbsp;Delivery flow</h3>
+  </div>
+  <div class="tw bleed">
+    <table>
+      <thead><tr><th>Stage</th><th>Trigger</th><th>Actor</th><th>Guest sees</th><th>Failure handling</th></tr></thead>
+      <tbody>
+        <tr><td>Pre-assign</td><td>Predicted ready &minus; courier travel time</td><td>svc-dispatch</td><td>"Finding your driver"</td><td>No supply in 60s &rarr; escalate pay +$1.50 per 45s, 3 steps</td></tr>
+        <tr><td>Offer</td><td>Ranked courier list</td><td>Courier app</td><td>&mdash;</td><td>3 declines &rarr; widen radius, then third-party network</td></tr>
+        <tr><td>Accept</td><td>Courier taps accept</td><td>Courier</td><td>Driver name, photo, vehicle, live position</td><td>Accept-then-abandon &rarr; instant reassign, guest told once with a revised ETA</td></tr>
+        <tr><td>Arrive at store</td><td>Geofence enter</td><td>Auto</td><td>"Driver at the restaurant"</td><td>Food not ready &rarr; wait pay accrues after 5 min, charged to the late party</td></tr>
+        <tr><td>Pickup</td><td>Courier confirms items + order code</td><td>Courier</td><td>"On the way"</td><td>Item missing &rarr; courier flags in app, kitchen re-fires, guest notified before departure</td></tr>
+        <tr><td>Transit</td><td>Location stream, 5s</td><td>Courier app</td><td>Map, ETA, remaining stops if batched</td><td>Signal loss &rarr; show last-known with an explicit timestamp; never fake movement</td></tr>
+        <tr><td>Arrive</td><td>Geofence + guest instructions</td><td>Auto</td><td>"Driver is here"</td><td>Gate/buzzer failure &rarr; masked-number call, then 8-min wait, then documented return</td></tr>
+        <tr><td>Handoff</td><td>Photo or PIN (guest choice)</td><td>Courier</td><td>Photo of the drop</td><td>Wrong address &rarr; recovery flow with courier compensation and guest credit</td></tr>
+        <tr><td>Settle</td><td>Delivered event</td><td>svc-ledger</td><td>Receipt + split ratings</td><td>Disputed delivery &rarr; evidence packet (photo, GPS, timestamps) drives the decision</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <h3>5.5 &nbsp;Loyalty flow</h3>
+  </div>
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 05.3 &mdash; Earn, redeem, and inter-org settlement</span><b>MD-FLOW-503</b></div>
+<pre>
+  <b>EARN</b>
+  order SETTLED at org A
+        │
+        ▼
+  points = floor(eligible_subtotal_cents / 100) × tier_multiplier
+           <i>eligible = subtotal only — never tax, tip, or delivery fee</i>
+        │
+        ├──▶ loyalty_entries (+points, org_id=A, liability_cents = points × $0.01)
+        ├──▶ journal: DR marketing_expense(A) / CR loyalty_liability(platform)
+        └──▶ push: "+142 points · 1,858 to your next reward"
+
+  <b>REDEEM AT THE SAME ORG (A)</b>
+  reserve → apply discount → order settles → commit
+        └──▶ journal: DR loyalty_liability / CR sales(A)          <i>clean, no transfer</i>
+
+  <b>REDEEM AT A DIFFERENT ORG (B)  ← the interesting case</b>
+        ┌──────────────────────────────────────────────────────────┐
+        │ Guest redeems 2,000 pts ($20) at org B.                  │
+        │                                                          │
+        │ 1. B is made whole immediately: B books a full $20 sale.  │
+        │ 2. Platform clearing account pays B $20 from the          │
+        │    loyalty_liability pool.                               │
+        │ 3. The pool was funded by A at $0.010/pt when earned.     │
+        │ 4. Platform recognizes the spread + breakage as revenue.  │
+        │                                                          │
+        │ journal:  DR loyalty_liability   $20.00                   │
+        │           CR clearing_payable(B) $20.00                   │
+        │ monthly:  net settlement across all orgs, one ACH each    │
+        └──────────────────────────────────────────────────────────┘
+
+  <b>TIERS</b>   bronze → silver (12 orders/yr) → gold (24) → platinum (48)
+           multiplier    1.0×        1.25×            1.5×          2.0×
+           benefits      —      free delivery   priority prep   surprise drops
+                                  over $25       during rush
+
+  <b>ACCOUNTING DISCIPLINE</b>
+   · liability recognized at grant, not at redemption
+   · breakage recognized on a rolling 24-month redemption curve, not guessed
+   · expiry 18 months of inactivity, where state law permits; escheatment
+     table maintained per jurisdiction
+   · an org leaving the platform settles outstanding earned liability on exit —
+     this is a term in the MSA, not a surprise
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>5.6 &nbsp;Marketing campaign flow</h3>
+  </div>
+  <div class="tw bleed">
+    <table>
+      <thead><tr><th>Phase</th><th>Operator action</th><th>System action</th><th>Gate</th></tr></thead>
+      <tbody>
+        <tr><td>Propose</td><td>None &mdash; weekly digest arrives</td><td>AI scans data, drafts 3 campaigns with projected incremental revenue and CI</td><td>&mdash;</td></tr>
+        <tr><td>Review</td><td>Reads a one-screen card per campaign</td><td>Shows audience size, estimated cost, projected lift, sample message</td><td>&mdash;</td></tr>
+        <tr><td>Edit</td><td>Tweaks copy or offer</td><td>Live re-estimate of audience and cost; claims filter runs on every edit</td><td>Blocked claims cannot be saved</td></tr>
+        <tr><td>Validate</td><td>&mdash;</td><td>Consent check, suppression list, frequency caps, quiet hours by guest timezone, store-open check, offer margin floor</td><td><span class="pill p-crit">Hard block</span> on any failure</td></tr>
+        <tr><td>Holdout</td><td>&mdash;</td><td>10% randomly withheld, stratified by RFM segment</td><td>Not skippable</td></tr>
+        <tr><td>Send</td><td>One tap</td><td>Rate-limited delivery, send-time optimization per person, carrier throttling</td><td>Kill switch available mid-send</td></tr>
+        <tr><td>Measure</td><td>&mdash;</td><td>21-day window; incremental revenue = treated &minus; holdout, scaled; sequential test avoids peeking</td><td>&mdash;</td></tr>
+        <tr><td>Report</td><td>Reads outcome</td><td>"Sent 1,240 · Cost $31 · <b>Incremental</b> revenue $1,847 · Lift 14.2% (95% CI 6&ndash;22%) · 4 opt-outs"</td><td>&mdash;</td></tr>
+        <tr><td>Learn</td><td>&mdash;</td><td>Result feeds the uplift model; underperforming templates are retired automatically</td><td>&mdash;</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <h3>5.7 &nbsp;POS sync flow</h3>
+    <p>Covered structurally in &sect;1.7. The operational flow that matters is the <strong>cutover</strong>, because that is the moment a restaurant decides whether it trusts the platform.</p>
+  </div>
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 05.4 &mdash; POS cutover runbook</span><b>MD-FLOW-504</b></div>
+<pre>
+  T−7d   Menu parity audit. Automated diff old POS vs. MD. Every mismatch
+         resolved and signed off by the operator. <i>Zero open diffs is the gate.</i>
+  T−3d   Hardware on-site, on the network, test tickets printed at every station.
+  T−1d   Staff walkthrough (6 min/role). Cheat-sheet card printed and taped
+         to each terminal. Manager PIN set. Rollback rehearsed once.
+  ─────────────────────────────────────────────────────────────────────────
+  T=0    <b>Tuesday 9:00am.</b> Never Friday. Never before a holiday.
+         Old POS stays powered and reachable for 7 days.
+  T+0h   Open on MD. MD staff present (on-site for the first 20 accounts,
+         on video after). Both systems can take an order.
+  T+2h   <b>Go/no-go checkpoint.</b> Abort criteria, decided in advance:
+           · &gt;3 tickets misrouted, OR
+           · any payment failure not attributable to the card, OR
+           · average order entry time &gt; 1.4× the old POS
+         Any one triggers rollback. Rollback is &lt; 10 minutes and is
+         <i>not</i> treated as a failure — it is treated as the system working.
+  T+1d   Daily close reconciled against the old POS's last full day.
+  T+7d   Old POS decommissioned. Historical data exported and imported
+         into MD so the CRM starts with real history, not an empty list.
+  ─────────────────────────────────────────────────────────────────────────
+  Measured: time-to-first-order, tickets-per-hour vs. baseline, void rate,
+            staff-reported friction (single question, day 1 / day 7 / day 30)
+</pre>
+  </div>
+</section>

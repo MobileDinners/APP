@@ -1,0 +1,271 @@
+
+<section id="s03">
+  <div class="chit">
+    <div class="meta"><span><b>MD-03</b></span><span>Stack</span><span>Section 03 of 10</span><span>Decisions + rejected alternatives</span></div>
+    <h2>Technical stack</h2>
+    <p class="lede">Every row states what was rejected and why. A stack table without rejected alternatives is a list of preferences, not a decision record.</p>
+  </div>
+
+  <div class="prose">
+    <h4>Client applications</h4>
+  </div>
+  <div class="tw bleed">
+    <table>
+      <thead><tr><th>Surface</th><th>Choice</th><th>Rationale</th><th>Rejected</th></tr></thead>
+      <tbody>
+        <tr><td>Consumer app (iOS/Android)</td><td class="k">React Native + Expo, Hermes, Reanimated</td><td>One team ships both stores; near-native feel for a list-and-checkout app; OTA updates for copy and pricing UI without store review</td><td><b>Flutter</b> &mdash; excellent, but a second language for a team already writing TypeScript everywhere. <b>Native twice</b> &mdash; unaffordable pre-Series A.</td></tr>
+        <tr><td>POS terminal</td><td class="k">Kotlin / Android (native)</td><td>Card reader SDKs, ESC/POS peripherals, cash drawer, kiosk mode, and predictable performance under a 200-tap rush all demand native</td><td><b>React Native</b> &mdash; the peripheral and reliability surface is where RN hurts most. This is the one client that must be native.</td></tr>
+        <tr><td>KDS</td><td class="k">Android (native) + kiosk lockdown</td><td>Cheap hardware, LAN-first, must run for 14h without a reload</td><td><b>Web app on a tablet</b> &mdash; browser lifecycle kills long-lived WebSocket sessions.</td></tr>
+        <tr><td>Driver app</td><td class="k">React Native + background geolocation</td><td>Shares components with consumer app; battery-tuned native module for location</td><td><b>PWA</b> &mdash; background location is not viable.</td></tr>
+        <tr><td>Operator console</td><td class="k">Next.js 15 (App Router), TypeScript, TanStack Query, Tailwind + Radix</td><td>Dense data UI; server components for heavy analytics pages; one design system with storefronts</td><td><b>Remix</b> &mdash; fine, smaller ecosystem. <b>SPA-only</b> &mdash; loses SEO reuse for storefronts.</td></tr>
+        <tr><td>Restaurant storefronts</td><td class="k">Next.js on edge, ISR + on-demand revalidate</td><td>SEO is a headline feature; menu pages must be statically fast and instantly invalidated on publish</td><td><b>Client-rendered SPA</b> &mdash; disqualifying for local SEO.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose"><h4>Backend and data</h4></div>
+  <div class="tw bleed">
+    <table>
+      <thead><tr><th>Layer</th><th>Choice</th><th>Rationale</th><th>Rejected</th></tr></thead>
+      <tbody>
+        <tr><td>Core services</td><td class="k">Go (order, payment, ledger, dispatch, gateway sync)</td><td>Predictable latency and memory, trivial static binaries for the edge appliance, excellent concurrency for fan-out</td><td><b>Node</b> for the money path &mdash; GC pauses and numeric footguns. <b>Rust</b> &mdash; correct but slower to staff and iterate.</td></tr>
+        <tr><td>Product services</td><td class="k">TypeScript / NestJS (crm, campaign, sites, marketplace BFF)</td><td>Shares types with the frontends via a generated client; fast iteration where latency budgets are loose</td><td><b>Go everywhere</b> &mdash; unnecessary friction for CRUD-shaped product work.</td></tr>
+        <tr><td>AI services</td><td class="k">Python / FastAPI + Ray</td><td>The entire ML ecosystem; Ray for batch scoring and distributed feature jobs</td><td>&mdash;</td></tr>
+        <tr><td>Primary OLTP</td><td class="k">Postgres 16 + RLS + pgvector + PostGIS + partitioning</td><td>One engine covers relational, geo, and vector needs at this scale; RLS gives real tenant isolation</td><td><b>MongoDB</b> &mdash; wrong for money. <b>Separate vector DB</b> &mdash; premature until &gt;10M vectors.</td></tr>
+        <tr><td>Analytics</td><td class="k">ClickHouse</td><td>Sub-second cohort and funnel queries over billions of events at a fraction of warehouse cost</td><td><b>Snowflake/BigQuery</b> &mdash; superb, but cost and latency are wrong for in-product operator dashboards.</td></tr>
+        <tr><td>Streaming</td><td class="k">Redpanda &rarr; Kafka</td><td>Kafka-compatible, single binary, low ops burden early; migration is config-only</td><td><b>SQS/SNS</b> &mdash; no replay or log semantics. <b>NATS</b> &mdash; weaker ecosystem for CDC.</td></tr>
+        <tr><td>CDC / outbox</td><td class="k">Debezium</td><td>Eliminates dual-write; events are a byproduct of the transaction, not a second call that can fail</td><td>Application-level publish &mdash; the classic source of phantom and missing events.</td></tr>
+        <tr><td>Cache / locks / geo</td><td class="k">Redis 7 (Cluster)</td><td>Idempotency cache, rate limits, geospatial courier index, pub/sub for tracking</td><td>&mdash;</td></tr>
+        <tr><td>Search</td><td class="k">OpenSearch + pgvector hybrid</td><td>BM25 for names and cuisines, vector for intent ("something light and spicy"), reciprocal-rank fusion to combine</td><td><b>Algolia</b> &mdash; excellent DX, cost scales badly with an item-level index across all tenants.</td></tr>
+        <tr><td>Object storage</td><td class="k">Cloudflare R2 (+ S3 for archival)</td><td>Zero egress on menu snapshots, images, and receipts, which are read constantly</td><td>Pure S3 &mdash; egress becomes a real line item.</td></tr>
+        <tr><td>Edge DB (gateway)</td><td class="k">Embedded Postgres; SQLite (WAL) on terminals</td><td>Same SQL dialect as the cloud means one schema, one migration story</td><td><b>Realm/Couchbase Lite</b> &mdash; another data model to maintain.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose"><h4>Realtime, AI infrastructure, and DevOps</h4></div>
+  <div class="tw bleed">
+    <table>
+      <thead><tr><th>Layer</th><th>Choice</th><th>Rationale</th><th>Rejected</th></tr></thead>
+      <tbody>
+        <tr><td>Realtime transport</td><td class="k">WebSocket over a Go fan-out tier; MQTT on the LAN</td><td>Guest tracking and operator feeds need resumable ordered streams; MQTT is the right fit for printers and KDS on premises</td><td><b>Pusher/Ably</b> &mdash; good, but per-connection cost at marketplace scale is punishing. <b>SSE</b> &mdash; no client&rarr;server channel for the KDS.</td></tr>
+        <tr><td>Model serving</td><td class="k">Triton (ranker, forecast) + vLLM (open-weight) + hosted LLM APIs</td><td>Cheap deterministic models self-hosted; frontier reasoning bought; router picks per task</td><td>All-hosted &mdash; unit economics collapse on high-QPS ranking. All-self-hosted &mdash; quality ceiling on copy and reasoning.</td></tr>
+        <tr><td>Feature store</td><td class="k">Feast &mdash; Redis online, Iceberg/S3 offline</td><td>One definition for training and serving; eliminates train/serve skew, which is the #1 cause of silent model decay</td><td>Hand-rolled feature SQL &mdash; guarantees skew.</td></tr>
+        <tr><td>Orchestration</td><td class="k">Dagster</td><td>Asset-centric lineage matters when a marketing model consumes a menu table consumed by a pricing model</td><td><b>Airflow</b> &mdash; task-centric, weaker lineage.</td></tr>
+        <tr><td>Experimentation</td><td class="k">GrowthBook (self-hosted) + a sequential-testing library</td><td>Feature flags and experiment assignment in one place; sequential tests avoid peeking errors on small restaurant samples</td><td>Ad-hoc flags &mdash; makes every AI claim unfalsifiable.</td></tr>
+        <tr><td>Compute</td><td class="k">AWS EKS, Karpenter, Graviton, spot for batch</td><td>Graviton is ~20% cheaper for Go/Python services; spot for training and nightly scoring</td><td><b>Serverless-everything</b> &mdash; cold starts on Plane A are unacceptable. <b>Bare EC2</b> &mdash; too much undifferentiated ops.</td></tr>
+        <tr><td>IaC / CD</td><td class="k">Terraform + Argo CD (GitOps), progressive delivery via Argo Rollouts</td><td>Canary by tenant cohort; a bad POS deploy must never hit all locations at once</td><td>Manual deploys &mdash; not survivable once past 50 locations.</td></tr>
+        <tr><td>Observability</td><td class="k">OpenTelemetry &rarr; Grafana stack (Mimir/Loki/Tempo); Sentry for clients</td><td>Vendor-portable; edge devices emit OTLP too</td><td><b>Datadog</b> &mdash; superb, and the bill grows superlinearly with device count.</td></tr>
+        <tr><td>Edge appliance OS</td><td class="k">Debian + systemd + Balena-style A/B OTA</td><td>Atomic updates with automatic rollback; a bricked gateway is a truck roll and a lost dinner service</td><td>Docker-on-consumer-NUC without A/B &mdash; no safe rollback.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note cool">
+    <span class="lbl">Scaling posture</span>
+    <p>The system is <strong>read-heavy on Plane C and write-heavy on Plane A</strong>, and those loads peak at the same moment: 6&ndash;8pm local. Scale reads with CDN + Redis + ClickHouse replicas; scale writes by partitioning Postgres on <span class="mono">business_date</span> and sharding by <span class="mono">org_id</span> only when a single primary genuinely saturates (realistically past ~4,000 locations). Do not shard early &mdash; cross-shard order/ledger consistency is a category of bug you should buy your way out of with bigger hardware for as long as possible.</p>
+  </div>
+</section>
+
+<section id="s04">
+  <div class="chit">
+    <div class="meta"><span><b>MD-04</b></span><span>AI Systems</span><span>Section 04 of 10</span><span>8 subsystems</span></div>
+    <h2>AI system design</h2>
+    <p class="lede">Eight subsystems, one orchestrator, one rule: every AI action is logged as a decision with its inputs, its proposal, the human verdict, and the measured outcome. Without that loop the models never improve and no claim about them is falsifiable.</p>
+  </div>
+
+  <div class="prose">
+    <h3>4.1 &nbsp;Model portfolio and routing</h3>
+    <p>Task class determines model class. The orchestrator routes on capability, latency budget, and cost ceiling &mdash; not on a hardcoded model name scattered through the codebase. A prompt registry versions every template; a change to a prompt is a deploy with an eval gate, exactly like a code change.</p>
+  </div>
+
+  <div class="tw bleed">
+    <table>
+      <caption>Model routing. Costs are order-of-magnitude planning figures, not quotes.</caption>
+      <thead><tr><th>Task</th><th>Model class</th><th>Latency budget</th><th>Volume</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Feed / item ranking</td><td class="k">GBDT (XGBoost / LambdaMART), self-hosted</td><td>&lt; 60ms</td><td>Very high</td><td>Retrained nightly; features from Feast; no LLM in this path, ever</td></tr>
+        <tr><td>Candidate retrieval</td><td class="k">Two-tower + ANN (HNSW)</td><td>&lt; 40ms</td><td>Very high</td><td>Person and item towers; embeddings refreshed hourly</td></tr>
+        <tr><td>Demand forecasting</td><td class="k">Temporal Fusion Transformer / gradient boosting on lags</td><td>Batch</td><td>Per location per 15 min</td><td>Drives prep-time, staffing, and capacity gating</td></tr>
+        <tr><td>Prep-time prediction</td><td class="k">Quantile regression (p50/p80/p95)</td><td>&lt; 30ms</td><td>High</td><td>p80 is the promise; p50 is the display; the gap is honesty</td></tr>
+        <tr><td>Price elasticity</td><td class="k">Bayesian hierarchical regression, partial pooling across similar restaurants</td><td>Batch</td><td>Weekly</td><td>Pooling is what makes a 9-month-old restaurant's estimate usable</td></tr>
+        <tr><td>Churn / LTV</td><td class="k">Gradient boosting + BG/NBD survival</td><td>Batch</td><td>Nightly</td><td>Feeds segments and campaign targeting</td></tr>
+        <tr><td>Campaign uplift</td><td class="k">Causal forest / T-learner on holdouts</td><td>Batch</td><td>Weekly</td><td>Targets <b>persuadables</b>, not likely-buyers &mdash; the difference is the entire ROI</td></tr>
+        <tr><td>Site + menu copywriting</td><td class="k">Frontier LLM (hosted)</td><td>&lt; 12s</td><td>Low</td><td>Quality-critical, low volume; run through the claims filter</td></tr>
+        <tr><td>Menu structuring / import</td><td class="k">Frontier LLM + vision for photographed menus</td><td>&lt; 30s</td><td>Low</td><td>Onboarding path; human confirms every price</td></tr>
+        <tr><td>Support / operator assistant</td><td class="k">Mid-tier LLM + RAG over tenant docs and analytics</td><td>&lt; 4s</td><td>Medium</td><td>Read-mostly tools; writes always require confirmation</td></tr>
+        <tr><td>Review sentiment / themes</td><td class="k">Small open-weight model, self-hosted</td><td>Batch</td><td>Medium</td><td>Cheap, private, good enough</td></tr>
+        <tr><td>Food photo enhancement</td><td class="k">Diffusion (img2img) + strict provenance labeling</td><td>&lt; 20s</td><td>Low</td><td><b>Enhancement only</b> &mdash; never generate a dish that does not exist</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Hard rule &mdash; no generated food</span>
+    <p>Diffusion may relight, crop, clean a background, or upscale a real photograph of a real dish. It may not synthesize an image of a dish the kitchen has never plated. Guests order from photos; a synthetic photo is a consumer-protection problem and a refund generator. Every processed image carries a provenance record and the original is retained.</p>
+  </div>
+
+  <div class="prose">
+    <h3>4.2 &nbsp;Recommendation pipeline</h3>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 04.1 &mdash; Recommendation training and serving</span><b>MD-AI-401</b></div>
+<pre>
+ <b>OFFLINE (nightly)</b>                              <b>ONLINE (per request)</b>
+ ─────────────────────────────────────           ────────────────────────────────────
+ Kafka topics                                    request {person, geo, t, ctx}
+   consumer.behavior.v1                                     │
+   order.item.v1        ──▶ Iceberg (S3)                    ▼
+   menu.published.v1         raw event lake       ┌──────────────────────┐
+        │                         │               │ Feature fetch (Feast │
+        ▼                         ▼               │  online / Redis)     │
+  <u>label construction</u>      <u>feature pipeline</u>       │  p95 &lt; 12ms          │
+  impression → click →     (Dagster + Spark)      └──────────┬───────────┘
+  add-to-cart → order        · person 30/90d                 ▼
+  (with position debias      · item velocity      ┌──────────────────────┐
+   via inverse propensity)   · store reliability  │ Retrieval (4 sources)│
+        │                    · daypart, weather   │  ANN + pgvector +    │
+        ▼                    · margin, prep_p80   │  geo-pop + repeat    │
+  ┌───────────────────┐            │              └──────────┬───────────┘
+  │ Two-tower encoder │◀───────────┘                         ▼
+  │  person ⊗ item    │──▶ item vectors ──▶ HNSW    ┌──────────────────────┐
+  └───────────────────┘                    index    │ Ranker (GBDT, Triton)│
+  ┌───────────────────┐                             │  ~600 → 60           │
+  │ Ranker (LambdaMART│──▶ model registry ─────────▶│  p95 &lt; 60ms          │
+  │  NDCG@10 objective│    (MLflow, versioned)      └──────────┬───────────┘
+  └───────────────────┘                                        ▼
+        │                                          ┌──────────────────────┐
+        ▼                                          │ Policy layer         │
+  <u>offline eval</u>: NDCG@10, recall@100,             │  diversity · fatigue │
+  calibration, per-segment fairness,               │  ε-greedy · ads slot │
+  <i>counterfactual replay on logged slates</i>          │  availability filter │
+        │                                          └──────────┬───────────┘
+        ▼                                                     ▼
+  gate: must beat champion on NDCG                    slate + <b>impression log</b>
+  AND not regress cold-start recall                   (features snapshotted at
+        │                                              serve time — this is what
+        ▼                                              makes tomorrow's training
+  shadow → 5% → 25% → 100%                             set unbiased)
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>4.3 &nbsp;Menu optimization engine</h3>
+    <p>The optimizer is not "an LLM that suggests prices." It is a constrained optimization over an estimated demand model, with an LLM used only for the parts that are genuinely language: naming and description. Keeping those two concerns separate is what makes the output defensible to a skeptical operator.</p>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 04.2 &mdash; Menu optimizer</span><b>MD-AI-402</b></div>
+<pre>
+  INPUTS                          MODEL                           OUTPUT
+  ──────────────────────────      ────────────────────────────    ─────────────────────
+  item sales history (52w)   ┐
+  price change history       │    <b>1. Elasticity estimation</b>
+  cost_cents per item        ├──▶ Bayesian hierarchical:
+  prep_seconds               │    log(q_it) = α_i + β_i·log(p_it)
+  modifier attach rates      │              + γ·daypart + δ·season
+  competitor prices (scrape) │              + ε·weather + u_store
+  weather + local events     ┘    β_i ~ Normal(β_category, σ²)
+                                  ← partial pooling handles thin data
+                                             │
+                                             ▼
+                                  <b>2. Margin model</b>
+                                  m_i(p) = p − cost_i − (prep_i · labor_rate)
+                                             │
+                                             ▼
+                                  <b>3. Constrained optimization</b>
+                                  max Σ_i  q_i(p_i) · m_i(p_i)
+                                  s.t. |Δp_i| ≤ 8% per cycle
+                                       Σ_i 1[Δp_i ≠ 0] ≤ 5 per 14 days
+                                       p_i respects psych thresholds
+                                       category price ordering preserved
+                                       no increase on top-3 traffic drivers
+                                             │
+                                             ▼
+                                  <b>4. Menu engineering quadrant</b>
+                                  popularity × margin →
+                                    ★ STAR        promote, protect price
+                                    ⚙ PLOW-HORSE  raise price OR cut cost
+                                    ? PUZZLE      re-describe, reposition
+                                    ✕ DOG         remove, free up prep time
+                                             │
+                                             ▼
+                                  <b>5. LLM layer</b> (language only)
+                                  rewrite name + description for the
+                                  PUZZLE set · claims filter · brand voice
+                                             │
+                                             ▼
+                    ┌────────────────────────────────────────────────┐
+                    │ PROPOSAL CARD (what the operator actually sees) │
+                    │  "Raise Chicken Bowl $13.50 → $14.25"           │
+                    │  Projected: +$412/mo margin  (CI: $180–$640)    │
+                    │  Confidence: MEDIUM  ·  Based on 1,840 orders   │
+                    │  Risk: demand −3.1% expected                    │
+                    │  [ Accept ]  [ Test as A/B ]  [ Dismiss ]       │
+                    └────────────────────────────────────────────────┘
+                                             │
+                                    accepted → 21-day measurement
+                                    window → actual vs. projected →
+                                    <i>feeds back into elasticity prior</i>
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>4.4 &nbsp;Marketing automation and uplift</h3>
+    <p>The standard failure of restaurant marketing tools is reporting <em>attributed</em> revenue: send 10,000 texts, count everyone who ordered in 72 hours, declare victory. Most of those people were going to order anyway. Mobile Dinners reports <strong>incremental</strong> revenue against a mandatory holdout, which will produce smaller and truer numbers &mdash; and is the only honest basis for the ROI claim in the sales deck.</p>
+  </div>
+
+  <div class="tw bleed">
+    <table>
+      <caption>Journey library shipped by default. Every journey carries a permanent 10% holdout; the operator dashboard shows lift, not attribution.</caption>
+      <thead><tr><th>Journey</th><th>Trigger</th><th>Model input</th><th>Typical action</th><th>Guardrail</th></tr></thead>
+      <tbody>
+        <tr><td>Welcome</td><td>First order settles</td><td>Item affinity from order 1</td><td>Thank-you + points explainer + second-order nudge at day 5</td><td>No discount in the first message</td></tr>
+        <tr><td>Second-order push</td><td>7d after first order, no reorder</td><td>Uplift score</td><td>Offer only to persuadables; content-only to the rest</td><td>Max one offer per 30d</td></tr>
+        <tr><td>Lapsed win-back</td><td>Days since last order &gt; 2&times; personal cadence</td><td>Churn probability, historical AOV</td><td>Escalating value ladder over 3 touches</td><td>Stop after 3; move to quarterly</td></tr>
+        <tr><td>Cart abandon</td><td>Cart idle 45 min</td><td>Cart value, prior abandon rate</td><td>Single reminder, no discount on first attempt</td><td>Never if store now closed</td></tr>
+        <tr><td>Post-delivery recovery</td><td>Rating &le; 2 or late delivery</td><td>Fault attribution (kitchen vs. courier)</td><td>Apology + credit, routed to the responsible party's cost</td><td>Auto-credit cap per guest per 90d</td></tr>
+        <tr><td>Birthday / anniversary</td><td>Date field or first-order anniversary</td><td>&mdash;</td><td>Fixed-value reward, 14-day window</td><td>Requires explicit date consent</td></tr>
+        <tr><td>Slow-hour fill</td><td>Forecast utilization &lt; 40% for a daypart</td><td>Demand forecast + elasticity</td><td>Time-boxed offer to nearby high-propensity guests</td><td>Only items with margin above floor after discount</td></tr>
+        <tr><td>New-item launch</td><td>Menu publish adds an item</td><td>Item embedding vs. person affinity</td><td>Targeted announcement to the top decile of affinity</td><td>Suppress if item lacks a photo</td></tr>
+        <tr><td>Cross-brand discovery</td><td>Marketplace, 3+ orders, single-brand</td><td>Collaborative filtering</td><td>Introduce one adjacent restaurant, points-funded</td><td><b>Never</b> promoted inside a single-brand storefront</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Conflict of interest, stated plainly</span>
+    <p>Cross-brand discovery moves an order from restaurant A to restaurant B. That is good for the network and bad for restaurant A on that night. The policy: cross-brand promotion happens <strong>only</strong> in marketplace surfaces the platform owns, never inside a restaurant's own storefront, app, or email list; it never targets a guest who ordered from A in the last 14 days; and the resulting order still pays A nothing and B nothing in commission. Restaurants can see this policy in writing. Getting caught quietly poaching from your own customers is the fastest way to lose a restaurant network.</p>
+  </div>
+
+  <div class="prose">
+    <h3>4.5 &nbsp;Training data, evaluation, and guardrails</h3>
+  </div>
+  <div class="tw bleed">
+    <table>
+      <thead><tr><th>System</th><th>Training data</th><th>Cold start</th><th>Primary metric</th><th>Guardrail metric</th></tr></thead>
+      <tbody>
+        <tr><td>Ranker</td><td>Logged impressions + clicks + conversions with position debiasing, 90d</td><td>Popularity by hex + editorial curation</td><td>NDCG@10</td><td>Cold-start recall; per-restaurant exposure floor</td></tr>
+        <tr><td>Retrieval</td><td>Co-order graph, item text + image embeddings</td><td>Content-based only</td><td>Recall@100</td><td>Catalog coverage &gt; 60%</td></tr>
+        <tr><td>Prep-time</td><td>Ticket fire &rarr; bump timestamps, 180d, per station</td><td>Category priors from similar restaurants</td><td>Pinball loss @ p80</td><td>Late-order rate</td></tr>
+        <tr><td>Demand forecast</td><td>Order counts per 15-min bucket, 2y, + weather + events + holidays</td><td>Day-of-week seasonal naive</td><td>WAPE</td><td>Understaffing incidents</td></tr>
+        <tr><td>Elasticity</td><td>Natural price variation + deliberate A/B tests</td><td>Category-level pooled prior</td><td>Posterior predictive check</td><td>Realized vs. projected margin delta</td></tr>
+        <tr><td>Uplift</td><td>Holdout-controlled campaign history</td><td>Send to all, learn from the holdout</td><td>Qini coefficient</td><td>Opt-out rate, complaint rate</td></tr>
+        <tr><td>Copy generation</td><td>Prompted; no tenant data used for base-model training</td><td>&mdash;</td><td>Human accept rate</td><td>Claims-filter violation rate (target 0)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <h4>Guardrails that ship with V1</h4>
+    <ul>
+      <li><strong>Claims filter.</strong> A deterministic classifier plus a rules list blocks generated text containing allergen assertions ("gluten-free", "nut-free"), health claims, origin claims ("locally sourced"), and superlatives that create liability. Blocked spans are shown to the operator with an explanation, not silently removed.</li>
+      <li><strong>Action bounds.</strong> Price changes capped per cycle and per window; discounts cannot push an item below a margin floor; campaign sends capped per guest per week and per org per day; no autonomous action may create financial exposure above a per-tenant ceiling.</li>
+      <li><strong>Autonomy ladder.</strong> Every AI capability starts at <em class="term">suggest</em>. It advances to <em class="term">auto-with-undo</em> only after 30 accepted suggestions at &ge;80% acceptance for that tenant, and to <em class="term">autonomous</em> only for reversible, bounded actions. The ladder is per-tenant and per-capability, and it can be walked back automatically if acceptance drops.</li>
+      <li><strong>Decision log.</strong> Every proposal writes <span class="mono">ai.decision.v1</span> with model version, prompt version, feature snapshot, proposal, human verdict, and the measured 21-day outcome. This is the eval set, the audit trail, and the dispute record simultaneously.</li>
+      <li><strong>Cost governor.</strong> Per-tenant and per-task token budgets with hard stops; the router degrades to a cheaper model before it degrades availability, and never silently &mdash; the operator sees which tier produced a result.</li>
+      <li><strong>Data boundary.</strong> Tenant data is never used to train a model whose outputs are served to a different tenant, except as aggregated statistics with a minimum cohort size of 25. This is a contractual commitment, and it is enforced in the feature pipeline, not in a policy document.</li>
+    </ul>
+  </div>
+</section>

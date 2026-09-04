@@ -1,0 +1,295 @@
+
+<div class="s01-continued">
+  <div class="prose">
+    <h3>1.6 &nbsp;API surface</h3>
+    <p>Three protocols, chosen per consumer rather than per fashion. REST/JSON for operator and partner integrations (cacheable, debuggable, easy to document). gRPC for internal service-to-service and the edge gateway (typed, streaming, low overhead on a marginal restaurant uplink). WebSocket for guest-facing live state. GraphQL is deliberately excluded from the transaction path &mdash; it makes rate limiting, caching, and cost attribution materially harder for a system whose core endpoints are a small, stable set.</p>
+  </div>
+
+  <div class="tw bleed">
+    <table>
+      <caption>Public API v1. All mutating endpoints require <span class="mono">Idempotency-Key</span>; all responses carry <span class="mono">X-MD-Request-Id</span>. Auth is OAuth2 client-credentials for partners, OIDC for humans, device-bound mTLS certs for terminals.</caption>
+      <thead><tr><th>Method + path</th><th>Purpose</th><th>Notable semantics</th></tr></thead>
+      <tbody>
+        <tr><td class="k">POST /v1/orders</td><td>Create order (any channel)</td><td>Idempotent; validates against <span class="mono">menu_version_id</span>; 409 on price drift</td></tr>
+        <tr><td class="k">POST /v1/orders/:id/transitions</td><td>Advance state machine</td><td>Body carries <span class="mono">from_state</span>; 409 on optimistic-concurrency mismatch</td></tr>
+        <tr><td class="k">GET /v1/orders/:id</td><td>Read order + event tail</td><td><span class="mono">?include=events,ticket,delivery</span></td></tr>
+        <tr><td class="k">POST /v1/orders/:id/refunds</td><td>Full or partial refund</td><td>Writes reversing journal; requires <span class="mono">refund:write</span> scope</td></tr>
+        <tr><td class="k">GET /v1/menus/:location_id/current</td><td>Published menu snapshot</td><td>ETag = content hash; served from CDN</td></tr>
+        <tr><td class="k">POST /v1/menus/:location_id/versions</td><td>Publish new menu version</td><td>Immutable; returns hash; emits <span class="mono">menu.published.v1</span></td></tr>
+        <tr><td class="k">PATCH /v1/menus/:location_id/availability</td><td>86 / un-86 items</td><td>Hot path from POS; sub-second propagation to marketplace</td></tr>
+        <tr><td class="k">POST /v1/payments/intents</td><td>Create payment intent</td><td>Returns client secret; PAN never touches MD</td></tr>
+        <tr><td class="k">POST /v1/payments/:id/capture</td><td>Capture authorized amount</td><td>Supports tip adjustment within processor window</td></tr>
+        <tr><td class="k">GET /v1/marketplace/feed</td><td>Ranked personalized listings</td><td>Geo + time + person; p95 budget 250ms; falls back to distance sort</td></tr>
+        <tr><td class="k">GET /v1/marketplace/listings/:id</td><td>Storefront + live availability</td><td>Merges menu snapshot + 86 overlay + prep-time estimate</td></tr>
+        <tr><td class="k">POST /v1/carts/:id/items</td><td>Add to cart</td><td>Server-authoritative pricing; client totals are advisory only</td></tr>
+        <tr><td class="k">POST /v1/checkout</td><td>Quote + place order</td><td>Two-phase: <span class="mono">quote</span> (fees, ETA, points) then <span class="mono">commit</span></td></tr>
+        <tr><td class="k">GET /v1/deliveries/:id/track</td><td>Delivery state</td><td>Upgradeable to WebSocket; polling fallback at 10s</td></tr>
+        <tr><td class="k">POST /v1/loyalty/redeem</td><td>Spend points</td><td>Serializable txn; reserves then commits on order settle</td></tr>
+        <tr><td class="k">GET /v1/crm/profiles</td><td>Segment query</td><td>Cursor paginated; org-scoped by RLS</td></tr>
+        <tr><td class="k">POST /v1/campaigns/:id/activate</td><td>Start a journey</td><td>Validates consent, quiet hours, frequency caps before any send</td></tr>
+        <tr><td class="k">POST /v1/ai/suggestions/:id/accept</td><td>Accept an AI proposal</td><td>Applies the diff; logs to <span class="mono">ai.decision.v1</span> for eval</td></tr>
+        <tr><td class="k">GET /v1/analytics/metrics</td><td>Time series + cohorts</td><td>ClickHouse-backed; 60s cache; async export for &gt;1M rows</td></tr>
+        <tr><td class="k">POST /v1/webhooks/processor</td><td>Processor callbacks</td><td>Signature-verified, replay-window enforced, idempotent</td></tr>
+        <tr><td class="k">WS /v1/stream/orders</td><td>Operator live order feed</td><td>Resumable via <span class="mono">last_seq</span>; per-location channel</td></tr>
+        <tr><td class="k">WS /v1/stream/track/:id</td><td>Guest delivery tracking</td><td>Coarse driver location, 5s cadence, no reverse geocoding of home</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <h3>1.7 &nbsp;POS integration logic</h3>
+    <p>Two distinct modes, and conflating them is the classic failure. <strong>Native mode</strong>: Mobile Dinners <em>is</em> the POS and owns the menu of record. <strong>Coexist mode</strong>: an incumbent POS (Toast, Square, Clover, Revel) remains the system of record and Mobile Dinners operates as a growth and demand layer on top. Coexist is the wedge that lets a restaurant adopt without ripping out hardware mid-season; native is where the margin and the data quality live. The migration path between them is a product feature, not an afterthought.</p>
+  </div>
+
+  <div class="tw bleed">
+    <table>
+      <caption>Integration modes. "Menu authority" is the field that determines conflict resolution direction.</caption>
+      <thead><tr><th>Dimension</th><th>Native mode</th><th>Coexist mode</th></tr></thead>
+      <tbody>
+        <tr><td>Menu authority</td><td>Mobile Dinners</td><td>Incumbent POS (MD holds a shadow copy + overlay)</td></tr>
+        <tr><td>Order injection</td><td>Direct into svc-order</td><td>Push to POS via partner API or virtual-terminal emulation</td></tr>
+        <tr><td>Payment</td><td>MD payfac-lite, P2PE reader</td><td>POS processor keeps card-present; MD handles card-not-present only</td></tr>
+        <tr><td>Availability (86s)</td><td>Real-time from KDS/POS UI</td><td>Poll + webhook; 30&ndash;120s staleness window, surfaced honestly in UI</td></tr>
+        <tr><td>Kitchen routing</td><td>MD KDS</td><td>POS's own KDS/printers; MD sends a formatted ticket</td></tr>
+        <tr><td>Item cost data</td><td>Captured in MD</td><td>Manual entry or CSV import; degrades optimizer quality</td></tr>
+        <tr><td>Failure mode</td><td>Local-first, fully offline capable</td><td>Degrades to "queue and retry"; orders can back up if POS API is down</td></tr>
+        <tr><td>ARPU</td><td>Full stack + processing spread</td><td>SaaS + marketplace fulfillment only</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 01.5 &mdash; Menu sync and conflict resolution</span><b>MD-ARCH-103</b></div>
+<pre>
+  <i>COEXIST MODE — bidirectional sync with a declared authority</i>
+
+  ┌──────────────┐   1. webhook: item.updated       ┌────────────────────┐
+  │ Incumbent    │─────────────────────────────────▶│ svc-menu           │
+  │ POS          │   2. fallback poll (5 min)       │  · normalize       │
+  │ (authority   │◀─────────────────────────────────│  · map to MD model │
+  │  for items,  │   3. push: availability only     │  · diff vs shadow  │
+  │  prices)     │      (never prices, never names) │  · compute hash    │
+  └──────────────┘                                  └─────────┬──────────┘
+                                                              │
+                        ┌─────────────────────────────────────┘
+                        ▼
+        ┌───────────────────────────────────────────────────────┐
+        │ <b>CONFLICT RESOLUTION</b>                                    │
+        │                                                       │
+        │ Field class          Winner            On divergence  │
+        │ ─────────────────────────────────────────────────────  │
+        │ name, price, tax     <u>POS</u>               overwrite MD    │
+        │ description, photo   <u>MD</u>                keep MD        │
+        │ availability (86)    <u>most recent write</u>   LWW + clock   │
+        │                                        skew guard 90s │
+        │ marketplace-only     <u>MD</u>                POS unaware     │
+        │   items / upsells                                     │
+        │ item cost            <u>MD</u>                POS has none    │
+        │                                                       │
+        │ Divergence &gt; 3 fields on one item ⇒ flag for human     │
+        │ review rather than silently overwriting. Silent        │
+        │ overwrite of a price is the single worst bug this      │
+        │ system can ship.                                       │
+        └───────────────────────────────────────────────────────┘
+
+  <i>NATIVE MODE — publish pipeline</i>
+
+  edit ──▶ draft ──▶ validate ──▶ canonicalize ──▶ sha256 ──▶ snapshot to S3
+                       │                                          │
+                       │ (schema, price sanity, tax category,     ▼
+                       │  modifier min/max, orphan check)   menu.published.v1
+                       │                                          │
+                       ▼                              ┌───────────┼───────────┐
+                  reject with                         ▼           ▼           ▼
+                  field-level                    CDN purge   POS/KDS pull  search
+                  diagnostics                    (ETag)      (delta only)  reindex
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>1.8 &nbsp;Offline-first gateway protocol</h3>
+    <p>The gateway is a small Linux appliance (or a designated terminal acting as leader) that holds a full local replica of the location's operating data and continues to run a complete service window with zero internet. This is the hardest engineering problem in Plane A and the one that earns trust with operators &mdash; a POS that dies with the Wi-Fi is a liability, not a product.</p>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 01.6 &mdash; Offline write path and reconciliation</span><b>MD-ARCH-104</b></div>
+<pre>
+  ONLINE                                    OFFLINE (uplink down)
+  ──────────────────────────────────        ────────────────────────────────────────
+  terminal ─▶ gateway ─▶ local commit       terminal ─▶ gateway ─▶ local commit
+                     └─▶ outbox ─▶ cloud                       └─▶ outbox (grows)
+                                    │
+                                    ▼       Guest-facing effects suspended:
+                              ack + seq       · no marketplace orders inbound
+                                              · no SMS/push sends
+                                              · loyalty EARN accrues locally,
+                                                REDEEM blocked above local balance
+                                              · card auth via store-and-forward
+                                                (offline floor limit, risk-capped)
+
+  ┌────────────────────────── RECONNECT SEQUENCE ─────────────────────────────────┐
+  │ 1. Gateway opens resumable stream, sends {device_id, last_acked_seq, lww_hlc}  │
+  │ 2. Cloud replies with a cursor + any missed inbound (menu changes, mkt orders) │
+  │ 3. Gateway drains outbox in seq order, batched 100/frame, at-least-once        │
+  │ 4. Cloud dedupes on (device_id, seq) AND (org_id, idempotency_key)             │
+  │ 5. Conflicts resolved per policy table below                                   │
+  │ 6. Gateway applies inbound, then flips `synced=true` and clears the UI banner  │
+  └───────────────────────────────────────────────────────────────────────────────┘
+
+  <b>CONFLICT POLICY</b>
+  ┌───────────────────────┬────────────────────────────────────────────────────────┐
+  │ Order created offline │ Always accepted. Server assigns canonical order_id;     │
+  │                       │ local id kept as `client_ref`. Never rejected — the     │
+  │                       │ food was already made and paid for.                    │
+  ├───────────────────────┼────────────────────────────────────────────────────────┤
+  │ Same item 86'd both   │ Union of unavailability (safest for the guest).         │
+  │ sides                 │                                                        │
+  ├───────────────────────┼────────────────────────────────────────────────────────┤
+  │ Price changed in      │ Order honors the price on the menu_version the terminal │
+  │ cloud during outage   │ had. Delta booked to `price_variance` account, and      │
+  │                       │ surfaced in the daily close report.                     │
+  ├───────────────────────┼────────────────────────────────────────────────────────┤
+  │ Loyalty redeem offline│ Reserved locally against last-known balance. On sync,   │
+  │ exceeds true balance  │ if insufficient, the platform absorbs the shortfall and │
+  │                       │ logs it. Never claw back from a guest who already ate.  │
+  ├───────────────────────┼────────────────────────────────────────────────────────┤
+  │ Store-and-forward     │ Retried on reconnect. Declines become an operator task  │
+  │ card decline          │ with the guest's contact info, not a silent write-off.  │
+  └───────────────────────┴────────────────────────────────────────────────────────┘
+
+  Clock: hybrid logical clocks (HLC) on every local write. Device wall-clock is
+  untrusted; `occurred_at` is kept for forensics, `recorded_at` + HLC order events.
+
+  Storage: SQLite (WAL) on terminals, embedded Postgres on the gateway.
+  Retention: 14 days local, then pruned once cloud-acked.
+  Crypto: local DB encrypted at rest; outbox signed with the device key so a
+          tampered appliance cannot forge orders into the cloud.
+</pre>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Risk control &mdash; store-and-forward payments</span>
+    <p>Offline card acceptance transfers chargeback risk to whoever authorizes it. Policy: an offline floor limit (default $75), a per-window aggregate cap (default $2,000), a hard cutoff at 4 hours offline, and a per-tenant opt-in with the risk stated in plain language during onboarding. Above the cap, the terminal requires cash or a signed intent to re-run later. Do not let a growth-hacking instinct set these defaults; let the risk team set them.</p>
+  </div>
+
+  <div class="prose">
+    <h3>1.9 &nbsp;Marketplace and dispatch logic</h3>
+    <p>The marketplace has to solve three problems simultaneously: <strong>what to show</strong> (ranking), <strong>whether it can actually be made</strong> (capacity), and <strong>whether it can be delivered on time</strong> (dispatch feasibility). Most consumer food apps solve the first and fake the other two. Because Mobile Dinners owns the kitchen, it can be honest.</p>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 01.7 &mdash; Feed assembly and delivery quote</span><b>MD-ARCH-105</b></div>
+<pre>
+  GET /v1/marketplace/feed?lat&amp;lng&amp;t
+  ────────────────────────────────────────────────────────────────────────────
+  <b>Stage 1 — HARD FILTER</b>  (Postgres GIST + Redis, ~15ms)
+     open_now(t, hours, exceptions)
+     AND ST_DWithin(location.geo, guest.geo, service_radius_m)
+     AND accepting_orders = true            ← operator "pause" switch
+     AND kitchen_load &lt; overload_threshold  ← live from KDS
+     AND has_deliverable_capacity(t)        ← dispatch supply check
+
+  <b>Stage 2 — CANDIDATE GEN</b>  (~40ms, parallel, target ~600 candidates)
+     ├─ collaborative filtering  : ALS/two-tower ANN over person embedding
+     ├─ content similarity       : pgvector kNN on item + cuisine embeddings
+     ├─ geo-popularity           : trending in this hex at this daypart
+     ├─ repeat-affinity          : this person's own reorder set
+     └─ new/cold-start           : editorially boosted, exploration budget
+
+  <b>Stage 3 — RANK</b>  (~60ms, gradient-boosted ranker → LambdaMART/XGBoost)
+     score = w1·P(click)          learned
+           + w2·P(convert | click)
+           + w3·expected_margin   ← restaurant's margin, NOT platform take
+           + w4·fulfillment_conf  ← P(on-time) from prep + dispatch model
+           − w5·distance_penalty
+           − w6·fatigue_penalty   ← shown recently, not clicked
+
+  <b>Stage 4 — SLATE</b>  (~10ms)
+     diversity (max 2 per cuisine in top 10) · dedupe brands ·
+     ε-greedy exploration slot (ε = 0.08) · sponsored slot at rank 3 or 7,
+     <i>always labeled, never blended</i>, and suppressed if relevance &lt; floor
+
+  ──────────────────────────────────────────────────────────────────────────
+  DELIVERY QUOTE  (the number the guest is promised)
+  ──────────────────────────────────────────────────────────────────────────
+    promised_at = order_time
+                + prep_time_p80(item_mix, current_queue_depth, staffing)
+                + courier_to_store_eta
+                + drive_time(store→guest, live traffic)
+                + handoff_buffer(building_type, floor, gate_code_present)
+                + <i>safety_margin(σ)</i>
+
+    Quote the <b>p80</b>, not the mean. Underpromising by 4 minutes costs
+    nothing; overpromising by 4 minutes costs a refund and a review.
+
+  ──────────────────────────────────────────────────────────────────────────
+  DISPATCH  (offer → accept → batch)
+  ──────────────────────────────────────────────────────────────────────────
+    Assignment is a rolling-horizon bipartite match re-solved every 10s:
+      minimize  Σ (courier_wait + guest_lateness·λ + empty_miles·μ)
+      s.t.      one active offer per courier
+                batch_size ≤ 3 and detour ≤ 8 min and no cold-item mixing
+                (hot ∥ frozen never batched)
+
+    Supply ladder, in priority order:
+      1. Restaurant staff driver (cheapest, best margin for operator)
+      2. Mobile Dinners gig pool (metro-dependent, density-gated)
+      3. Third-party courier network (Nash / Uber Direct / DoorDash Drive)
+      4. <i>Pickup-only fallback</i> — if no supply, do not show a delivery
+         promise the network cannot keep. Degrade the offer, not the truth.
+</pre>
+  </div>
+
+  <div class="prose">
+    <h3>1.10 &nbsp;Security, compliance, and tenancy</h3>
+  </div>
+
+  <div class="tw bleed">
+    <table>
+      <caption>Control matrix. Anything marked Day 1 is a launch blocker, not a backlog item.</caption>
+      <thead><tr><th>Domain</th><th>Control</th><th>Implementation</th><th>When</th></tr></thead>
+      <tbody>
+        <tr><td>Card data</td><td>PCI DSS SAQ-A / P2PE</td><td>Processor SDK on device; tokens only in MD; no PAN in logs, memory, or backups</td><td><span class="pill p-crit">Day 1</span></td></tr>
+        <tr><td>Tenancy</td><td>Row-level security</td><td>Postgres RLS + pool-injected <span class="mono">app.org_id</span>; automated cross-tenant leak test in CI</td><td><span class="pill p-crit">Day 1</span></td></tr>
+        <tr><td>Auth</td><td>OIDC + short-lived JWT</td><td>15-min access tokens, rotating refresh, JWKS; step-up MFA for refunds, payouts, bulk export</td><td><span class="pill p-crit">Day 1</span></td></tr>
+        <tr><td>Devices</td><td>mTLS + attestation</td><td>Per-device cert issued at pairing; revocable; signed outbox payloads</td><td><span class="pill p-crit">Day 1</span></td></tr>
+        <tr><td>Messaging</td><td>TCPA / CAN-SPAM / CASL</td><td>Double opt-in for SMS, per-org consent records, STOP/HELP handling, quiet hours by guest timezone, immutable consent audit log</td><td><span class="pill p-crit">Day 1</span></td></tr>
+        <tr><td>Privacy</td><td>CCPA/CPRA + GDPR-ready</td><td>DSAR pipeline, deletion cascades across ClickHouse + feature store, regional data residency flag</td><td><span class="pill p-warn">V1</span></td></tr>
+        <tr><td>Money</td><td>Segregated funds + reconciliation</td><td>Daily three-way reconcile: processor settlement &harr; ledger &harr; bank; automated break detection</td><td><span class="pill p-crit">Day 1</span></td></tr>
+        <tr><td>Drivers</td><td>Worker classification</td><td>Jurisdiction-aware engagement model, background checks via Checkr, insurance verification, per-state policy table</td><td><span class="pill p-warn">V1</span></td></tr>
+        <tr><td>Accessibility</td><td>WCAG 2.2 AA</td><td>Consumer app + operator console; ADA exposure on public storefronts is real and litigated</td><td><span class="pill p-warn">V1</span></td></tr>
+        <tr><td>AI</td><td>Content + action guardrails</td><td>Allergen/claims filter on generated copy, price-change bounds, human approval above thresholds, full decision log</td><td><span class="pill p-crit">Day 1</span></td></tr>
+        <tr><td>Attestation</td><td>SOC 2 Type II</td><td>Controls instrumented from month 3; audit window opens month 9</td><td><span class="pill p-off">M12</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <h3>1.11 &nbsp;Observability and SLOs</h3>
+    <p>Service levels are set by plane, and the alerting policy differs accordingly. A Plane A breach pages a human at 2am. A Plane C breach opens a ticket.</p>
+  </div>
+
+  <div class="tw bleed">
+    <table>
+      <caption>SLO targets. Error budget policy: two consecutive breached windows freezes feature deploys for that plane until the budget recovers.</caption>
+      <thead><tr><th>Indicator</th><th>Plane</th><th>Target</th><th>Window</th><th>On breach</th></tr></thead>
+      <tbody>
+        <tr><td>Order accept &rarr; ticket on KDS</td><td>A</td><td>p99 &lt; 1.5s</td><td>28d</td><td><span class="pill p-crit">Page</span></td></tr>
+        <tr><td>Terminal offline &rarr; local write success</td><td>A</td><td>100%</td><td>28d</td><td><span class="pill p-crit">Page</span></td></tr>
+        <tr><td>Payment auth success rate</td><td>A</td><td>&gt; 98.5%</td><td>7d</td><td><span class="pill p-crit">Page</span></td></tr>
+        <tr><td>Ledger reconcile breaks</td><td>A</td><td>0 unexplained</td><td>1d</td><td><span class="pill p-crit">Page</span></td></tr>
+        <tr><td>Menu publish &rarr; visible everywhere</td><td>A/C</td><td>p95 &lt; 20s</td><td>7d</td><td><span class="pill p-warn">Alert</span></td></tr>
+        <tr><td>Marketplace feed latency</td><td>C</td><td>p95 &lt; 250ms</td><td>7d</td><td><span class="pill p-warn">Alert</span></td></tr>
+        <tr><td>Delivery promise accuracy (&plusmn;5 min)</td><td>C</td><td>&gt; 85%</td><td>7d</td><td><span class="pill p-warn">Alert</span></td></tr>
+        <tr><td>Driver location freshness</td><td>C</td><td>p95 &lt; 8s</td><td>1d</td><td><span class="pill p-warn">Alert</span></td></tr>
+        <tr><td>Campaign send &rarr; delivered</td><td>B</td><td>p95 &lt; 5 min</td><td>7d</td><td><span class="pill p-off">Ticket</span></td></tr>
+        <tr><td>AI suggestion generation</td><td>B</td><td>p95 &lt; 12s</td><td>7d</td><td><span class="pill p-off">Ticket</span></td></tr>
+        <tr><td>Analytics query latency</td><td>B</td><td>p95 &lt; 2s</td><td>7d</td><td><span class="pill p-off">Ticket</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <p>Instrumentation is OpenTelemetry end to end, including the edge gateway &mdash; a trace that starts on a terminal tap and ends at a ledger write is the only way to debug the class of problem operators actually report ("the ticket didn't print"). Traces sample at 100% for Plane A errors, 1% baseline elsewhere. Every log line carries <span class="mono">org_id</span>, <span class="mono">location_id</span>, and <span class="mono">request_id</span>; none carries a PAN, a full phone number, or a guest address.</p>
+  </div>
+</div>

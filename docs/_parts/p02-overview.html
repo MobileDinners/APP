@@ -1,0 +1,142 @@
+
+<section id="s00">
+  <div class="chit">
+    <div class="meta"><span><b>MD-00</b></span><span>Overview</span><span>Section 00 of 10</span><span>Read first</span></div>
+    <h2>The wedge, the shape, and the money</h2>
+    <p class="lede">Mobile Dinners is three products that only work because they are one product: an operating system for the restaurant, a growth engine that runs on its data, and a consumer marketplace that monetizes the network the first two create.</p>
+  </div>
+
+  <div class="prose">
+    <h3>The problem, stated precisely</h3>
+    <p>An independent restaurant doing $1.2M/yr in revenue runs on six to nine disconnected systems: a POS (Toast, Square, Clover), a website (Wix or a nephew), a delivery aggregator or three (DoorDash, Uber Eats, Grubhub), an email tool (Mailchimp), a loyalty punch card, a reservation system, and a spreadsheet. Each holds a fragment of the customer. None of them talk. The aggregators hold the most valuable fragment &mdash; who ordered what, when, and how often &mdash; and rent it back at 15&ndash;30% of gross.</p>
+    <p>The compounding damage is not the fee. It is that <strong>the restaurant never accumulates an asset.</strong> Ten years of DoorDash volume produces zero owned demand. The day they turn the app off, the demand evaporates, because it was never theirs.</p>
+
+    <h4>The commission math, per order</h4>
+  </div>
+
+  <div class="tw bleed">
+    <table>
+      <caption>Contribution per $42 delivery order. Food cost 30%, labor allocation 12%, packaging $1.10. Illustrative model &mdash; substitute real P&amp;L before pitching.</caption>
+      <thead><tr><th>Line</th><th>Aggregator (28%)</th><th>Aggregator (15% pickup)</th><th>Mobile Dinners</th></tr></thead>
+      <tbody>
+        <tr><td>Gross ticket</td><td class="num">$42.00</td><td class="num">$42.00</td><td class="num">$42.00</td></tr>
+        <tr><td>Marketplace commission</td><td class="num">&minus;$11.76</td><td class="num">&minus;$6.30</td><td class="num">$0.00</td></tr>
+        <tr><td>Payment processing</td><td class="num">included</td><td class="num">included</td><td class="num">&minus;$1.51</td></tr>
+        <tr><td>Delivery fulfillment (restaurant share)</td><td class="num">$0.00</td><td class="num">n/a</td><td class="num">&minus;$2.00</td></tr>
+        <tr><td>SaaS amortized (at 900 orders/mo)</td><td class="num">$0.00</td><td class="num">$0.00</td><td class="num">&minus;$0.55</td></tr>
+        <tr><td>COGS + packaging + labor</td><td class="num">&minus;$18.74</td><td class="num">&minus;$18.74</td><td class="num">&minus;$18.74</td></tr>
+        <tr><td><strong>Contribution</strong></td><td class="num"><strong>$11.50</strong></td><td class="num"><strong>$16.96</strong></td><td class="num"><strong>$19.20</strong></td></tr>
+        <tr><td>Customer record retained</td><td><span class="pill p-crit">No</span></td><td><span class="pill p-crit">No</span></td><td><span class="pill p-ok">Yes</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <p>The delta is $7.70 per order, or roughly <strong>$83,000/yr</strong> at 900 orders/month &mdash; against a $3,600&ndash;$8,400/yr subscription. That ratio is the entire sales pitch, and it is defensible arithmetic rather than a vibe.</p>
+
+    <h3>The three planes</h3>
+    <p>Everything in this document belongs to exactly one of three planes. The plane determines its latency budget, its failure mode, and its deployment cadence.</p>
+  </div>
+
+  <div class="diagram bleed">
+    <div class="cap"><span>Fig. 00.1 &mdash; Plane model</span><b>MD-ARCH-000</b></div>
+<pre>
+                        ┌───────────────────────────────────────────────┐
+                        │            <i>PLANE C — DEMAND</i>                    │
+   consumers ──────────▶│  Marketplace app · discovery · cross-brand     │
+                        │  loyalty · dispatch · personalization          │
+                        │  <u>latency: 100–800ms · fails soft</u>              │
+                        └────────────────────┬──────────────────────────┘
+                                             │ orders, identity, points
+                                             ▼
+                        ┌───────────────────────────────────────────────┐
+                        │            <i>PLANE B — GROWTH</i>                    │
+   operators ──────────▶│  CRM · campaigns · loyalty rules · site        │
+                        │  builder · menu optimizer · analytics          │
+                        │  <u>latency: seconds–hours · fails soft</u>           │
+                        └────────────────────┬──────────────────────────┘
+                                             │ reads events, writes menus/prices
+                                             ▼
+                        ┌───────────────────────────────────────────────┐
+                        │            <i>PLANE A — OPERATIONS</i>                │
+   kitchen ────────────▶│  POS · KDS · menu of record · tickets ·        │
+                        │  payments · printers · cash drawer            │
+                        │  <b>latency: &lt;100ms · MUST NOT FAIL</b>              │
+                        └───────────────────────────────────────────────┘
+
+   RULE: <b>Plane A never takes a synchronous dependency on B or C.</b>
+   A restaurant with no internet must still take orders, fire tickets,
+   print, and settle cards. B and C degrade; A does not.
+</pre>
+  </div>
+
+  <div class="prose">
+    <p>This is the single most important architectural constraint in the system, and it is the one most commonly violated by cloud-native POS startups. A kitchen at 7:40pm on a Friday cannot wait on a recommendation service. Plane A is a local-first system that replicates to the cloud; it is not a thin client.</p>
+
+    <h3>Why the three merge into one product</h3>
+  </div>
+
+  <div class="tw bleed">
+    <table>
+      <caption>Each plane produces the input the next one needs. Remove any single plane and the loop breaks.</caption>
+      <thead><tr><th>Plane</th><th>Produces</th><th>Consumed by</th><th>If missing</th></tr></thead>
+      <tbody>
+        <tr><td><strong>A. Operations</strong></td><td>Ground-truth item, price, modifier, prep-time, and settlement data</td><td>B (optimizer, analytics), C (real-time availability, ETA)</td><td>Marketplace shows stale menus and lies about ETAs; optimizer has no margin data</td></tr>
+        <tr><td><strong>B. Growth</strong></td><td>Unified customer profile, segments, offers, brand site, price/menu decisions</td><td>C (personalization, targeting), A (menu of record updates)</td><td>Marketplace is a commodity directory; restaurants churn because value is a fee cut only</td></tr>
+        <tr><td><strong>C. Demand</strong></td><td>New customers, cross-brand order frequency, driver supply, first-party demand signal</td><td>B (cold-start profiles, lookalikes), A (order volume)</td><td>Product is a POS + marketing suite &mdash; a crowded, low-growth category with no network effect</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    <span class="lbl">Founder note &mdash; the actual moat</span>
+    <p>Neither the POS nor the marketing suite is defensible on its own; both categories have well-funded incumbents. The defensible position is the <strong>closed loop</strong>: Mobile Dinners is the only party that sees a customer's behavior across many restaurants <em class="term">and</em> owns the menu-of-record and margin data inside each one. That intersection is what lets the system say "promote the $16 bowl to this specific person at 6:10pm on a Thursday because it has 71% margin, 4-minute prep, and she buys it 40% of the time when offered." No aggregator has margin data. No POS has cross-brand behavior.</p>
+  </div>
+
+  <div class="prose">
+    <h3>Positioning against the two reference points</h3>
+  </div>
+
+  <div class="tw bleed">
+    <table>
+      <caption>Capability comparison. Marked from the perspective of a single independent restaurant with 1&ndash;4 locations.</caption>
+      <thead><tr><th>Capability</th><th>OrderUp-class (POS)</th><th>Owner.com-class (growth)</th><th>Aggregators</th><th>Mobile Dinners</th></tr></thead>
+      <tbody>
+        <tr><td>POS + kitchen routing</td><td><span class="pill p-ok">Core</span></td><td><span class="pill p-crit">None</span></td><td><span class="pill p-crit">None</span></td><td><span class="pill p-ok">Core</span></td></tr>
+        <tr><td>Offline operation</td><td><span class="pill p-ok">Yes</span></td><td><span class="pill p-off">n/a</span></td><td><span class="pill p-crit">No</span></td><td><span class="pill p-ok">Yes</span></td></tr>
+        <tr><td>Owned website + SEO</td><td><span class="pill p-warn">Weak</span></td><td><span class="pill p-ok">Core</span></td><td><span class="pill p-crit">No</span></td><td><span class="pill p-ok">Core</span></td></tr>
+        <tr><td>CRM + lifecycle marketing</td><td><span class="pill p-warn">Basic</span></td><td><span class="pill p-ok">Core</span></td><td><span class="pill p-crit">Locked</span></td><td><span class="pill p-ok">Core</span></td></tr>
+        <tr><td>Loyalty</td><td><span class="pill p-warn">Single-brand</span></td><td><span class="pill p-warn">Single-brand</span></td><td><span class="pill p-warn">Platform-owned</span></td><td><span class="pill p-ok">Cross-brand</span></td></tr>
+        <tr><td>New-customer acquisition</td><td><span class="pill p-crit">None</span></td><td><span class="pill p-warn">Paid ads only</span></td><td><span class="pill p-ok">Strong</span></td><td><span class="pill p-ok">Marketplace</span></td></tr>
+        <tr><td>Commission on food revenue</td><td><span class="pill p-ok">0%</span></td><td><span class="pill p-ok">0%</span></td><td><span class="pill p-crit">15&ndash;30%</span></td><td><span class="pill p-ok">0%</span></td></tr>
+        <tr><td>Margin-aware merchandising</td><td><span class="pill p-crit">No</span></td><td><span class="pill p-crit">No</span></td><td><span class="pill p-crit">No</span></td><td><span class="pill p-ok">Yes</span></td></tr>
+        <tr><td>Owns the customer record</td><td><span class="pill p-warn">Partial</span></td><td><span class="pill p-ok">Yes</span></td><td><span class="pill p-crit">No</span></td><td><span class="pill p-ok">Yes</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="prose">
+    <h3>Engineering principles</h3>
+    <p>Ten rules that resolve most design arguments before they start. Where a later section contradicts one of these, the principle wins and the section is wrong.</p>
+    <ol>
+      <li><strong>Plane A is local-first.</strong> The terminal owns a durable local database and an outbox. The cloud is a replica, not the source of truth, during a service window.</li>
+      <li><strong>The menu is a versioned, immutable artifact.</strong> Menus are published as snapshots with content hashes, never mutated in place. Every order references the exact menu version it was placed against.</li>
+      <li><strong>Money is integer cents in a named currency.</strong> No floats anywhere in the pricing, tax, tip, or payout path. Ever.</li>
+      <li><strong>Every state change is an event.</strong> Orders, tickets, payouts, and loyalty balances are projections over an append-only log. Reconstructable history is non-negotiable for accounting and disputes.</li>
+      <li><strong>Idempotency keys on every mutating endpoint.</strong> Restaurant Wi-Fi retries. Assume every write arrives two to five times.</li>
+      <li><strong>AI proposes, humans dispose &mdash; until earned.</strong> Every AI action ships first as a suggestion with a one-tap accept. Autonomy is unlocked per-tenant by measured acceptance rate, not by a feature flag someone forgot.</li>
+      <li><strong>Tenant isolation is enforced at the database, not the ORM.</strong> Row-level security with a session-scoped tenant claim. An application bug must not become a cross-tenant data breach.</li>
+      <li><strong>Never store a PAN.</strong> Card data goes device-to-processor. The platform is SAQ-A / P2PE scope, permanently.</li>
+      <li><strong>Cross-brand loyalty is a liability on a balance sheet.</strong> Points are accounted for, escheatment-aware, and breakage-modeled from day one, not bolted on at Series A.</li>
+      <li><strong>Degrade loudly to operators, silently to guests.</strong> A guest should never see a stack trace; an operator should never be surprised by a subsystem that has been down for an hour.</li>
+    </ol>
+
+    <h3>Explicit non-goals</h3>
+    <ul>
+      <li><strong>Not a full-service table-management / reservations product</strong> at V1. Coursing, table splits, and floorplan management are a distinct hard problem; V1 targets quick-service, fast-casual, pizza, and ghost kitchens where ticket flow is linear.</li>
+      <li><strong>Not building an owned delivery fleet</strong> at MVP. Dispatch abstracts over third-party courier networks (Nash, Olo Dispatch, DoorDash Drive, Uber Direct) plus restaurant staff drivers. Gig supply is added only in launch metros where density supports it.</li>
+      <li><strong>Not competing on payment processing rate.</strong> The platform is a payfac-lite on top of a processor; margin comes from the spread, not from undercutting Stripe.</li>
+      <li><strong>Not an inventory / recipe-costing suite</strong> at V1. The optimizer consumes a coarse item-level cost input; deep back-of-house inventory is a V2 module or an integration.</li>
+    </ul>
+  </div>
+</section>

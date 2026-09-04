@@ -1,0 +1,94 @@
+# Mobile Dinners on Render.
+#
+# One web service, built from the Dockerfile, with a persistent disk for the
+# SQLite database. Render reads this file when you create a Blueprint from the
+# repository, so the service, the disk and the environment are provisioned
+# together rather than clicked in by hand.
+#
+# THREE THINGS TO KNOW BEFORE YOU DEPLOY
+#
+#   1. The disk requires a paid instance type. On the free tier the filesystem
+#      is ephemeral, so the database — every restaurant, order and account —
+#      is destroyed on each deploy and each restart. `starter` is the floor.
+#
+#   2. A service with a disk cannot do zero-downtime deploys. Render has to
+#      stop the running instance to detach the disk before the new one can
+#      mount it, so expect roughly a minute of downtime per deploy. Deploy
+#      outside service hours.
+#
+#   3. A disk attaches to exactly one instance, so this service cannot scale
+#      horizontally. That is fine for a pilot and is the signal for when to
+#      move to Postgres: the day one instance is not enough.
+#
+# Secrets are marked `sync: false`, which means Render prompts for them in the
+# dashboard and never stores them in this file. Nothing secret belongs in git.
+
+services:
+  - type: web
+    name: mobile-dinners
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    region: oregon
+    branch: main
+    autoDeploy: true
+
+    # Hits the database, not just the process — an app that is up but cannot
+    # read its data is not healthy, and Render should not keep it in rotation.
+    healthCheckPath: /api/health
+
+    disk:
+      name: mobile-dinners-data
+      mountPath: /data
+      sizeGB: 1
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      # Must match the disk mountPath above.
+      - key: MD_DATA_DIR
+        value: /data
+
+      # Seals POS access tokens at rest with AES-256-GCM. Render generates this
+      # once and keeps it stable; the app refuses to start in production
+      # without it rather than encrypt with a key published in the source.
+      #
+      # Do not rotate it casually — every already-sealed token becomes
+      # unreadable and each restaurant has to reconnect their POS.
+      - key: MD_TOKEN_KEY
+        generateValue: true
+
+      # Public origin, used to build Stripe onboarding return links and the
+      # webhook URLs you register. Set it to the real hostname once you know
+      # it — https://mobile-dinners.onrender.com to begin with.
+      - key: MD_PUBLIC_URL
+        sync: false
+
+      # Leave UNSET for a real launch. Setting it to "true" loads the demo
+      # restaurants, whose staff accounts share a password that is published in
+      # this repository — acceptable for a sales demo on a URL you control,
+      # never for a deployment that takes real orders.
+      - key: MD_ALLOW_DEMO_SEED
+        sync: false
+
+      # ----------------------------------------------------------- payments
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+
+      # ----------------------------------------------------------- delivery
+      - key: DOORDASH_DEVELOPER_ID
+        sync: false
+      - key: DOORDASH_KEY_ID
+        sync: false
+      - key: DOORDASH_SIGNING_SECRET
+        sync: false
+      - key: DOORDASH_WEBHOOK_SECRET
+        sync: false
+      - key: DOORDASH_ENV
+        value: sandbox

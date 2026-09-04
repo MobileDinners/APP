@@ -1,0 +1,251 @@
+<title>Mobile Dinners OS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..600&display=swap">
+<style>
+:root{
+  --ground:#EDEFF0; --surface:#FFFFFF; --surface-2:#F5F7F8; --surface-3:#E4E8EA;
+  --ink:#111619; --ink-2:#46545C; --ink-3:#6E7E87;
+  --rule:#D2D9DC; --rule-2:#BCC6CB;
+  --accent:#C22B36; --accent-soft:#FBE9EA; --accent-ink:#9A1F29;
+  --cyan:#0F6E7E; --cyan-soft:#E4F0F2;
+  --ok:#1F7A4D; --ok-soft:#E3F1EA;
+  --warn:#8F6210; --warn-soft:#F7EEDC;
+  --crit:#A81B29; --crit-soft:#F8E5E7;
+  --shadow:0 1px 2px rgba(17,22,25,.05),0 8px 24px -12px rgba(17,22,25,.16);
+  --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --body:"Newsreader",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --ground:#0E1215; --surface:#161C20; --surface-2:#1B2328; --surface-3:#242E34;
+    --ink:#E8EDEF; --ink-2:#A3B1B8; --ink-3:#7A8991;
+    --rule:#2A343A; --rule-2:#3A4750;
+    --accent:#F2606B; --accent-soft:#2B171A; --accent-ink:#F58B93;
+    --cyan:#4FB6C6; --cyan-soft:#12262A;
+    --ok:#4FBB86; --ok-soft:#13251C;
+    --warn:#D6A73C; --warn-soft:#26200F;
+    --crit:#F0707C; --crit-soft:#2B1519;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -14px rgba(0,0,0,.7);
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#0E1215; --surface:#161C20; --surface-2:#1B2328; --surface-3:#242E34;
+  --ink:#E8EDEF; --ink-2:#A3B1B8; --ink-3:#7A8991;
+  --rule:#2A343A; --rule-2:#3A4750;
+  --accent:#F2606B; --accent-soft:#2B171A; --accent-ink:#F58B93;
+  --cyan:#4FB6C6; --cyan-soft:#12262A;
+  --ok:#4FBB86; --ok-soft:#13251C;
+  --warn:#D6A73C; --warn-soft:#26200F;
+  --crit:#F0707C; --crit-soft:#2B1519;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 30px -14px rgba(0,0,0,.7);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:5.5rem;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--body);
+  font-size:1.0625rem;line-height:1.66;font-optical-sizing:auto;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important}
+}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+
+/* shell */
+.shell{display:block}
+@media (min-width:1120px){
+  .shell{display:grid;grid-template-columns:16.5rem minmax(0,1fr);align-items:start}
+}
+
+/* rail nav */
+.rail{position:sticky;top:0;z-index:40;background:var(--surface);border-bottom:1px solid var(--rule)}
+.rail-mark{display:none}
+.rail-list{list-style:none;display:flex;gap:0;margin:0;padding:0 .5rem;overflow-x:auto;scrollbar-width:thin}
+.rail-list a{display:flex;align-items:center;gap:.5rem;white-space:nowrap;padding:.85rem .7rem;
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--ink-3);text-decoration:none;border-bottom:2px solid transparent}
+.rail-list a .n{color:var(--rule-2);font-weight:600}
+.rail-list a:hover{color:var(--ink)}
+.rail-list a.on{color:var(--ink);border-bottom-color:var(--accent)}
+.rail-list a.on .n{color:var(--accent)}
+@media (min-width:1120px){
+  .rail{height:100vh;overflow-y:auto;border-bottom:0;border-right:1px solid var(--rule);
+    display:flex;flex-direction:column;gap:1.25rem;padding:1.75rem 0 2rem}
+  .rail-mark{display:block;padding:0 1.5rem}
+  .rail-mark .lockup{font-family:var(--display);font-weight:800;font-size:1.05rem;letter-spacing:-.02em;line-height:1.15}
+  .rail-mark .lockup em{font-style:normal;color:var(--accent)}
+  .rail-mark .sub{font-family:var(--mono);font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin-top:.4rem}
+  .rail-list{flex-direction:column;overflow:visible;padding:0}
+  .rail-list a{padding:.42rem 1.5rem;border-bottom:0;border-left:2px solid transparent;font-size:.715rem}
+  .rail-list a.on{border-left-color:var(--accent);background:var(--surface-2)}
+}
+
+/* doc */
+.doc{max-width:78rem;margin-inline:auto;padding:0 clamp(1.15rem,4vw,3.75rem) 7rem}
+.prose{max-width:69ch}
+.prose p{margin:0 0 1.05em}
+.prose ul,.prose ol{max-width:69ch;padding-left:1.15rem;margin:0 0 1.15em}
+.prose li{margin-bottom:.42em}
+.prose li::marker{color:var(--accent)}
+.prose ol li::marker{font-family:var(--mono);font-size:.85em;color:var(--ink-3)}
+a{color:var(--cyan);text-underline-offset:2px;text-decoration-thickness:1px}
+strong{font-weight:600;color:var(--ink)}
+em.term{font-style:normal;font-family:var(--mono);font-size:.86em;background:var(--surface-2);
+  border:1px solid var(--rule);border-radius:3px;padding:.06em .34em;color:var(--ink)}
+
+h1,h2,h3,h4,h5{font-family:var(--display);text-wrap:balance;margin:0}
+h2{font-size:clamp(1.8rem,3.4vw,2.5rem);font-weight:800;letter-spacing:-.028em;line-height:1.05}
+h3{font-size:clamp(1.18rem,1.9vw,1.42rem);font-weight:700;letter-spacing:-.014em;line-height:1.2;
+  margin:2.9rem 0 .85rem;padding-top:.2rem}
+h4{font-size:.78rem;font-weight:700;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--accent);margin:2.1rem 0 .7rem;font-family:var(--display)}
+h5{font-size:.95rem;font-weight:700;letter-spacing:-.005em;margin:1.5rem 0 .5rem}
+
+/* section chit */
+section{padding-top:3.5rem}
+.chit{position:relative;background:var(--surface);border:1px solid var(--rule);
+  padding:1.6rem clamp(1.1rem,2.4vw,2rem) 1.5rem;margin-bottom:2.4rem;box-shadow:var(--shadow)}
+.chit::before,.chit::after{content:"";position:absolute;left:0;right:0;height:7px;pointer-events:none;
+  background-image:radial-gradient(circle at 5px 50%,var(--ground) 3.9px,transparent 4.3px);
+  background-size:10px 7px;background-repeat:repeat-x}
+.chit::before{top:-1px}
+.chit::after{bottom:-1px}
+.chit .meta{display:flex;flex-wrap:wrap;gap:.5rem 1.15rem;font-family:var(--mono);font-size:.66rem;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);
+  border-bottom:1px dashed var(--rule-2);padding-bottom:.7rem;margin-bottom:.95rem}
+.chit .meta b{color:var(--accent);font-weight:600}
+.chit .lede{font-size:1.05rem;color:var(--ink-2);max-width:62ch;margin:.75rem 0 0;line-height:1.55}
+
+/* masthead */
+.mast{padding:clamp(3rem,7vw,5.5rem) 0 2.5rem;border-bottom:1px solid var(--rule)}
+.mast .kicker{font-family:var(--mono);font-size:.68rem;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:1.4rem;display:flex;align-items:center;gap:.7rem}
+.mast .kicker::after{content:"";flex:1;height:1px;background:var(--rule-2);max-width:9rem}
+h1{font-size:clamp(2.7rem,7.5vw,5.1rem);font-weight:800;letter-spacing:-.045em;line-height:.94}
+h1 span{color:var(--accent)}
+.mast .thesis{font-size:clamp(1.12rem,2vw,1.35rem);line-height:1.5;color:var(--ink-2);
+  max-width:52ch;margin:1.5rem 0 0}
+.titleblock{display:grid;grid-template-columns:repeat(auto-fit,minmax(9.5rem,1fr));
+  border-top:1px solid var(--rule);border-left:1px solid var(--rule);margin-top:2.6rem;background:var(--surface)}
+.titleblock div{padding:.8rem .95rem;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.titleblock dt{font-family:var(--mono);font-size:.62rem;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3)}
+.titleblock dd{margin:.3rem 0 0;font-family:var(--mono);font-size:.8rem;font-weight:500;color:var(--ink)}
+
+/* tables */
+.tw{overflow-x:auto;margin:1.3rem 0 1.9rem;border:1px solid var(--rule);background:var(--surface);
+  box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;min-width:38rem;font-size:.855rem;line-height:1.45}
+thead th{background:var(--surface-2);font-family:var(--mono);font-size:.63rem;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2);text-align:left;
+  padding:.65rem .8rem;border-bottom:2px solid var(--rule-2)}
+tbody td{padding:.62rem .8rem;border-bottom:1px solid var(--rule);vertical-align:top;
+  font-family:var(--display);font-weight:400;font-variant-numeric:tabular-nums}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:nth-child(even) td{background:var(--surface-2)}
+td.k,th.k,.mono{font-family:var(--mono);font-size:.79rem;font-weight:500}
+td.k{color:var(--cyan)}
+td.num{text-align:right;font-family:var(--mono);font-size:.8rem}
+table caption{caption-side:bottom;text-align:left;padding:.6rem .8rem;font-family:var(--mono);
+  font-size:.66rem;letter-spacing:.06em;color:var(--ink-3);border-top:1px solid var(--rule);background:var(--surface-2)}
+.bleed{max-width:none}
+
+/* pills */
+.pill{display:inline-block;font-family:var(--mono);font-size:.64rem;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;padding:.14em .5em;border-radius:2px;border:1px solid;white-space:nowrap}
+.p-ok{color:var(--ok);background:var(--ok-soft);border-color:var(--ok)}
+.p-warn{color:var(--warn);background:var(--warn-soft);border-color:var(--warn)}
+.p-crit{color:var(--crit);background:var(--crit-soft);border-color:var(--crit)}
+.p-neu{color:var(--cyan);background:var(--cyan-soft);border-color:var(--cyan)}
+.p-off{color:var(--ink-3);background:var(--surface-2);border-color:var(--rule-2)}
+
+/* diagrams */
+.diagram{margin:1.4rem 0 1.9rem;border:1px solid var(--rule);background:var(--surface);box-shadow:var(--shadow)}
+.diagram .cap{font-family:var(--mono);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink-3);padding:.55rem .9rem;border-bottom:1px solid var(--rule);background:var(--surface-2);
+  display:flex;justify-content:space-between;gap:1rem}
+.diagram .cap b{color:var(--accent);font-weight:600}
+.diagram pre{margin:0;overflow-x:auto;padding:1.15rem .9rem;font-family:var(--mono);
+  font-size:.735rem;line-height:1.5;color:var(--ink-2);tab-size:2}
+.diagram pre b{color:var(--ink);font-weight:600}
+.diagram pre i{color:var(--accent);font-style:normal}
+.diagram pre u{color:var(--cyan);text-decoration:none}
+
+/* callouts */
+.note{border-left:3px solid var(--accent);background:var(--surface);padding:.95rem 1.1rem;
+  margin:1.5rem 0;max-width:69ch}
+.note .lbl{font-family:var(--mono);font-size:.64rem;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--accent);display:block;margin-bottom:.35rem;font-weight:600}
+.note p{margin:0;font-size:.98rem;line-height:1.58;color:var(--ink-2)}
+.note p+p{margin-top:.65rem}
+.note.cool{border-left-color:var(--cyan)}
+.note.cool .lbl{color:var(--cyan)}
+
+/* kv grid */
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);margin:1.4rem 0 1.9rem}
+.kv > div{background:var(--surface);padding:.9rem 1rem}
+.kv dt{font-family:var(--mono);font-size:.63rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.kv dd{margin:.35rem 0 0;font-family:var(--display);font-size:1.5rem;font-weight:700;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums}
+.kv dd small{display:block;font-family:var(--body);font-size:.83rem;font-weight:400;color:var(--ink-2);
+  letter-spacing:0;margin-top:.25rem;line-height:1.4}
+
+/* spec cards */
+.spec{border:1px solid var(--rule);background:var(--surface);margin:1.3rem 0;box-shadow:var(--shadow)}
+.spec > header{display:flex;flex-wrap:wrap;align-items:baseline;gap:.6rem .85rem;
+  padding:.75rem .95rem;border-bottom:1px solid var(--rule);background:var(--surface-2)}
+.spec > header .id{font-family:var(--mono);font-size:.68rem;font-weight:600;color:var(--accent);letter-spacing:.08em}
+.spec > header h5{margin:0;font-size:1rem}
+.spec .body{padding:.3rem .95rem .95rem}
+.spec dl{display:grid;grid-template-columns:auto 1fr;gap:.05rem 1rem;margin:0;font-size:.9rem}
+.spec dt{font-family:var(--mono);font-size:.63rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-3);padding-top:.62rem;white-space:nowrap}
+.spec dd{margin:0;padding-top:.5rem;color:var(--ink-2);line-height:1.5}
+.spec dd b{color:var(--ink);font-weight:600}
+@media (max-width:640px){.spec dl{grid-template-columns:1fr}.spec dd{padding-top:.1rem;padding-bottom:.4rem}}
+
+hr.div{border:0;border-top:1px solid var(--rule);margin:3.2rem 0}
+footer.end{border-top:1px solid var(--rule);margin-top:4rem;padding:2.2rem 0 1rem;
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.08em;color:var(--ink-3);
+  display:flex;flex-wrap:wrap;gap:.6rem 2rem;justify-content:space-between}
+</style>
+
+<div class="shell">
+<nav class="rail" aria-label="Sections">
+  <div class="rail-mark">
+    <div class="lockup">Mobile<br>Dinners<em>.</em></div>
+    <div class="sub">Master Spec &middot; Rev A</div>
+  </div>
+  <ul class="rail-list">
+    <li><a href="#s00"><span class="n">00</span> Overview</a></li>
+    <li><a href="#s01"><span class="n">01</span> Architecture</a></li>
+    <li><a href="#s02"><span class="n">02</span> Modules</a></li>
+    <li><a href="#s03"><span class="n">03</span> Stack</a></li>
+    <li><a href="#s04"><span class="n">04</span> AI Systems</a></li>
+    <li><a href="#s05"><span class="n">05</span> Flows</a></li>
+    <li><a href="#s06"><span class="n">06</span> Interfaces</a></li>
+    <li><a href="#s07"><span class="n">07</span> Business Model</a></li>
+    <li><a href="#s08"><span class="n">08</span> Roadmap</a></li>
+    <li><a href="#s09"><span class="n">09</span> Pitch</a></li>
+    <li><a href="#s10"><span class="n">10</span> Risk Register</a></li>
+  </ul>
+</nav>
+
+<main class="doc">
+<header class="mast">
+  <div class="kicker">Restaurant Growth OS &nbsp;/&nbsp; Zero-Commission Marketplace</div>
+  <h1>Mobile<br>Dinners<span>.</span></h1>
+  <p class="thesis">One system that replaces the POS, the website, the marketing stack, the loyalty program, and the delivery app &mdash; and hands the 20&ndash;30% back to the kitchen.</p>
+  <dl class="titleblock">
+    <div><dt>Document</dt><dd>Master Spec</dd></div>
+    <div><dt>Revision</dt><dd>A / 2026-09-02</dd></div>
+    <div><dt>Scope</dt><dd>Arch + GTM</dd></div>
+    <div><dt>Status</dt><dd>Pre-seed</dd></div>
+    <div><dt>Planes</dt><dd>3</dd></div>
+    <div><dt>Services</dt><dd>19</dd></div>
+  </dl>
+</header>
