@@ -163,7 +163,7 @@ export function suggestFor(
 
   // How long the kitchen is already committed to. An add-on may extend that a
   // little, never a lot — blowing the promised time costs more than the upsell.
-  const cartPrep = Math.max(...cart.map((i) => i.prepSeconds));
+  const cartPrep = cart.reduce((n, i) => (i.prepSeconds > n ? i.prepSeconds : n), 0);
   const prepCeiling = cartPrep + PREP_SLACK_SECONDS;
 
   // Category saturation, so nobody is offered a third drink.

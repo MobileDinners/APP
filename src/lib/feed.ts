@@ -88,6 +88,23 @@ export function toggleFilter(q: FeedQuery, f: FeedFilter): FeedQuery {
   };
 }
 
+/**
+ * Smallest prep time on a menu.
+ *
+ * Deliberately a fold rather than `Math.min(...menu.map(...))`: spreading an
+ * array into a call passes one argument per element, and a few tens of
+ * thousands of items exceeds the engine's argument limit and throws
+ * RangeError. That took down the homepage, the feed, search and every
+ * storefront simultaneously, because all four compute an ETA the same way.
+ */
+export function fastestPrepSeconds(menu: { prepSeconds: number }[]): number {
+  let fastest = Infinity;
+  for (const item of menu) {
+    if (item.prepSeconds < fastest) fastest = item.prepSeconds;
+  }
+  return Number.isFinite(fastest) ? fastest : 0;
+}
+
 export function etaFor(card: FeedCard, mode: FeedMode): [number, number] {
   return mode === "pickup" ? [card.pickupLow, card.pickupHigh] : [card.etaLow, card.etaHigh];
 }

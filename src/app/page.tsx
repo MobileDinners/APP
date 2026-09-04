@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { listRestaurants } from "@/lib/orders";
 import { publishedMenu } from "@/lib/menu";
-import type { FeedCard } from "@/lib/feed";
+import { fastestPrepSeconds, type FeedCard } from "@/lib/feed";
 import { FoodPhoto } from "@/components/FoodPhoto";
 import { PhoneMockup } from "@/components/PhoneMockup";
 import { RestaurantCard } from "@/components/RestaurantCard";
@@ -29,7 +29,7 @@ function buildCards(): FeedCard[] {
     .map((r) => {
       const menu = publishedMenu(r.orgId);
       if (menu.length === 0) return null;
-      const fastest = Math.min(...menu.map((m) => m.prepSeconds));
+      const fastest = fastestPrepSeconds(menu);
       const ready = Math.round((r.prepBaseSeconds * 0.5 + fastest) / 60);
       return {
         ...r,

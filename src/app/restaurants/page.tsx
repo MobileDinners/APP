@@ -7,6 +7,7 @@ import {
   applyFeed,
   describeFeed,
   parseFeedQuery,
+  fastestPrepSeconds,
   type FeedCard,
 } from "@/lib/feed";
 import { CategoryTiles } from "@/components/CategoryTiles";
@@ -26,7 +27,7 @@ function buildCards(): FeedCard[] {
       // for business, and Math.min of nothing is Infinity.
       if (menu.length === 0) return null;
 
-      const fastest = Math.min(...menu.map((m) => m.prepSeconds));
+      const fastest = fastestPrepSeconds(menu);
       // Kitchen time is what pickup waits on; delivery adds the road leg.
       const ready = Math.round((r.prepBaseSeconds * 0.5 + fastest) / 60);
       return {

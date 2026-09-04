@@ -240,6 +240,7 @@ export async function syncCatalog(orgId: string, publish = true): Promise<SyncRe
       let localId = mapped.get(ext.externalId);
 
       // Not mapped yet: try to recognise it as an item we already sell.
+      let ambiguous = false;
       if (!localId) {
         const candidates = (byName.get(normalise(ext.name)) ?? []).filter(
           (id) => !claimed.has(id),
@@ -251,10 +252,34 @@ export async function syncCatalog(orgId: string, publish = true): Promise<SyncRe
             `INSERT OR REPLACE INTO pos_item_map (org_id, provider, external_id, item_id)
              VALUES (?, ?, ?, ?)`,
           ).run(orgId, conn.provider, ext.externalId, localId);
+        } else if (candidates.length > 1) {
+          // Two or more of ours share this name. Guessing would silently
+          // reprice the wrong dish, so a human decides.
+          ambiguous = true;
         }
       }
 
       const local = localId ? ours.get(localId) : undefined;
+
+      // --- ambiguous: flag, never create ------------------------------
+      //
+      // Creating here is what turns an ambiguous name into a runaway. Each
+      // duplicate we add becomes another candidate, so the next sync matches
+      // even less and creates more, doubling every run. Refusing to create is
+      // the behaviour the comment above always claimed.
+      if (!local && ambiguous) {
+        changes.push({
+          externalId: ext.externalId,
+          name: ext.name,
+          action: "flagged",
+          fields: [],
+          reason:
+            `You already have more than one item called "${ext.name}". ` +
+            "Rename them here so this can be matched to the right one — nothing " +
+            "was created or changed.",
+        });
+        continue;
+      }
 
       // --- new on the till -------------------------------------------
       if (!local) {

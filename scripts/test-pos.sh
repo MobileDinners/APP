@@ -165,3 +165,44 @@ curl -s -o /dev/null -b $OWNER -X DELETE "$B/api/pos/sync"
 chk "connection removed" "$(q "SELECT COUNT(*) FROM pos_connections WHERE org_id='org_sunrise'")" "0"
 chk "item mapping removed" "$(q "SELECT COUNT(*) FROM pos_item_map WHERE org_id='org_sunrise'")" "0"
 chk "menu items untouched" "$(q "SELECT COUNT(*) FROM items WHERE org_id='org_sunrise'")" "$ITEMS_BEFORE"
+
+echo
+echo "=== 13. an ambiguous name is flagged, never duplicated ==="
+# The regression that mattered. A sync that could not match an ambiguous name
+# used to CREATE a copy. Each copy became another candidate, so the next sync
+# matched even less and created more — doubling every run, until one restaurant
+# held 196,607 copies of a single dessert and the homepage 500'd on
+# Math.min(...menu) exceeding the argument limit.
+curl -s -o /dev/null -b $OWNER -X POST "$B/api/pos/connect" \
+  -H 'Content-Type: application/json' -d '{"provider":"sandbox"}'
+curl -s -o /dev/null -b $OWNER --max-time 120 -X POST "$B/api/pos/sync"
+
+BASE=$(q "SELECT COUNT(*) FROM items WHERE org_id='org_sunrise'")
+# Two of ours now share a name, so the till item matches neither.
+DUP=$(curl -s -b $OWNER -X POST "$B/api/menu/items" -H 'Content-Type: application/json' \
+  -d '{"name":"Ambiguous Plate","priceCents":900,"costCents":300,"section":"Tests"}' | jq_ "d.itemId")
+node -e "
+const {DatabaseSync}=require('node:sqlite');
+const db=new DatabaseSync('./data/mobile-dinners.db');
+db.prepare(\"INSERT OR REPLACE INTO pos_sandbox_catalog (org_id, external_id, name, description, price_cents, hidden, category) VALUES ('org_sunrise','SBX-AMBIG','Ambiguous Plate','',900,0,NULL)\").run();
+db.prepare(\"INSERT INTO items (item_id, org_id, section, name, description, price_cents, cost_cents, prep_seconds, station, is_available, sort_order, image_kw, is_popular, options_json) VALUES ('it_ambig2','org_sunrise','Tests','Ambiguous Plate','',900,300,300,'assembly',1,998,'food',0,'[]')\").run();
+" > /dev/null
+
+AFTER_SETUP=$(q "SELECT COUNT(*) FROM items WHERE org_id='org_sunrise'")
+for pass_no in 1 2 3; do
+  curl -s -o /dev/null -b $OWNER --max-time 120 -X POST "$B/api/pos/sync"
+done
+AFTER_SYNCS=$(q "SELECT COUNT(*) FROM items WHERE org_id='org_sunrise'")
+echo "  items: $AFTER_SETUP before three syncs, $AFTER_SYNCS after"
+chk "three syncs of an ambiguous name create nothing" "$AFTER_SYNCS" "$AFTER_SETUP"
+chk "and there are still exactly two of that name" \
+  "$(q "SELECT COUNT(*) FROM items WHERE org_id='org_sunrise' AND name='Ambiguous Plate'")" "2"
+
+echo
+echo "=== 14. cleanup ==="
+# Leaving POS-created items and the sandbox catalog behind is what let the
+# duplication compound across runs in the first place.
+node scripts/pos-cleanup.cjs
+chk "the restaurant is back to its baseline" \
+  "$(q "SELECT COUNT(*) FROM items WHERE org_id='org_sunrise' AND name='Ambiguous Plate'")" "0"
+chk "the sandbox catalog is empty" "$(q "SELECT COUNT(*) FROM pos_sandbox_catalog")" "0"

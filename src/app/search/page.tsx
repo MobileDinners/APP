@@ -1,5 +1,6 @@
 import { listRestaurants } from "@/lib/orders";
 import { publishedMenu } from "@/lib/menu";
+import { fastestPrepSeconds } from "@/lib/feed";
 import { SearchClient, type SearchIndexEntry } from "@/components/SearchClient";
 import type { FeedCard } from "@/components/RestaurantCard";
 
@@ -18,7 +19,7 @@ export default async function SearchPage({
   for (const r of listRestaurants()) {
     const menu = publishedMenu(r.orgId);
     if (menu.length === 0) continue; // not open for business yet
-    const fastest = Math.min(...menu.map((m) => m.prepSeconds));
+    const fastest = fastestPrepSeconds(menu);
     const ready = Math.round((r.prepBaseSeconds * 0.5 + fastest) / 60);
 
     cards.push({

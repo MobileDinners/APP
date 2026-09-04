@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getRestaurant } from "@/lib/orders";
 import { publishedMenu } from "@/lib/menu";
+import { fastestPrepSeconds } from "@/lib/feed";
 import { Storefront } from "@/components/Storefront";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export default async function StorefrontPage({
   const menu = publishedMenu(restaurant.orgId);
   if (menu.length === 0) notFound();
 
-  const fastest = Math.min(...menu.map((m) => m.prepSeconds));
+  const fastest = fastestPrepSeconds(menu);
   const etaLow = Math.round((restaurant.prepBaseSeconds * 0.5 + fastest) / 60) + 8;
 
   return (
