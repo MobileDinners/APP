@@ -14,18 +14,20 @@ const TERMINAL_BAD = new Set(["CANCELLED", "FAILED"]);
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ state?: string; orgId?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ state?: string; orgId?: string; q?: string; paid?: string; page?: string }>;
 }) {
   const sp = await searchParams;
   const page = Math.max(1, Number(sp.page ?? "1") || 1);
   const state = sp.state?.trim() || undefined;
   const orgId = sp.orgId?.trim() || undefined;
   const q = sp.q?.trim() || undefined;
+  const paidOnly = sp.paid === "1";
 
   const { rows, total } = listAllOrders({
     state,
     orgId,
     q,
+    paidOnly,
     limit: PAGE,
     offset: (page - 1) * PAGE,
   });
@@ -36,7 +38,7 @@ export default async function OrdersPage({
 
   const params = (over: Record<string, string | undefined>) => {
     const p = new URLSearchParams();
-    for (const [k, v] of Object.entries({ state, orgId, q, ...over })) {
+    for (const [k, v] of Object.entries({ state, orgId, q, paid: paidOnly ? "1" : undefined, ...over })) {
       if (v) p.set(k, v);
     }
     return `/admin/orders?${p}`;
@@ -119,13 +121,23 @@ export default async function OrdersPage({
                 ))}
               </select>
             </label>
+            <label className="flex items-center gap-2 px-1 text-[13.5px] font-semibold">
+              <input
+                type="checkbox"
+                name="paid"
+                value="1"
+                defaultChecked={paidOnly}
+                className="h-4 w-4 accent-[var(--brand)]"
+              />
+              Card payments only
+            </label>
             <button
               type="submit"
               className="rounded-[8px] bg-ink px-4 py-2 text-[13.5px] font-bold text-bg"
             >
               Apply
             </button>
-            {(state || orgId || q) && (
+            {(state || orgId || q || paidOnly) && (
               <Link
                 href="/admin/orders"
                 className="text-[13.5px] font-bold text-ink-3 hover:text-ink hover:underline"

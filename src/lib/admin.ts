@@ -484,7 +484,15 @@ export type AdminOrderRow = {
 };
 
 export function listAllOrders(
-  opts: { state?: string; orgId?: string; q?: string; limit?: number; offset?: number } = {},
+  opts: {
+    state?: string;
+    orgId?: string;
+    q?: string;
+    /** Only orders with a real card payment — the refundable ones. */
+    paidOnly?: boolean;
+    limit?: number;
+    offset?: number;
+  } = {},
 ) {
   const limit = Math.min(opts.limit ?? 50, 200);
   const offset = opts.offset ?? 0;
@@ -502,6 +510,11 @@ export function listAllOrders(
     where.push("(o.order_id LIKE ? OR o.guest_name LIKE ? OR o.guest_phone LIKE ?)");
     const like = `%${opts.q.trim()}%`;
     args.push(like, like, like);
+  }
+  if (opts.paidOnly) {
+    // Seeded and sandbox orders have no payments row, and nothing can be
+    // refunded against them. Support only ever wants this subset.
+    where.push("EXISTS (SELECT 1 FROM payments p2 WHERE p2.order_id = o.order_id)");
   }
   const clause = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
