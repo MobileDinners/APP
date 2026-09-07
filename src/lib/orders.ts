@@ -219,6 +219,9 @@ export type CreateOrderInput = {
    * quote could be made.
    */
   quotedDeliveryFeeCents?: number;
+  /** Coordinates the delivery fee was measured to, for the tracking map. */
+  addressLat?: number | null;
+  addressLng?: number | null;
   orgId: string;
   personId: string;
   fulfillment: Fulfillment;
@@ -361,8 +364,9 @@ export function createOrder(input: CreateOrderInput): Order {
       INSERT INTO orders (order_id, org_id, person_id, menu_version_id, upsell_arm, channel, fulfillment, state,
         subtotal_cents, discount_cents, tax_cents, tip_cents, delivery_fee_cents,
         service_fee_cents, total_cents, points_earned, points_redeemed,
-        guest_name, guest_phone, address, placed_at, promised_at, idempotency_key)
-      VALUES (?, ?, ?, ?, ?, 'marketplace', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        guest_name, guest_phone, address, placed_at, promised_at, idempotency_key,
+        address_lat, address_lng)
+      VALUES (?, ?, ?, ?, ?, 'marketplace', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       orderId, input.orgId, input.personId, menuVersion.menuVersionId,
       upsellArmFor(input.personId), input.fulfillment,
@@ -376,6 +380,8 @@ export function createOrder(input: CreateOrderInput): Order {
       input.guestName.slice(0, 80), input.guestPhone.slice(0, 32),
       input.address.slice(0, 160), now.toISOString(), promised.toISOString(),
       input.idempotencyKey,
+      input.addressLat ?? null,
+      input.addressLng ?? null,
     );
 
     const insertLine = db.prepare(`
@@ -575,6 +581,7 @@ export function bumpLine(orderId: string, lineNo: number): Order {
 type OrderRow = {
   order_id: string; org_id: string; person_id: string | null;
   menu_version_id: string | null; channel: string; fulfillment: string; state: string;
+  address_lat: number | null; address_lng: number | null;
   subtotal_cents: number; discount_cents: number; tax_cents: number; tip_cents: number;
   delivery_fee_cents: number; service_fee_cents: number; total_cents: number;
   points_earned: number; points_redeemed: number; guest_name: string;
@@ -612,6 +619,7 @@ function hydrate(r: OrderRow): Order {
     totalCents: r.total_cents, pointsEarned: r.points_earned,
     pointsRedeemed: r.points_redeemed, guestName: r.guest_name,
     guestPhone: r.guest_phone, address: r.address,
+    addressLat: r.address_lat ?? null, addressLng: r.address_lng ?? null,
     placedAt: r.placed_at, promisedAt: r.promised_at,
     lines: lines.map((l): OrderLine => ({
       lineNo: l.line_no, itemId: l.item_id, name: l.name, qty: l.qty,

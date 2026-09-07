@@ -353,6 +353,10 @@ export function deliveryFeeForMiles(miles: number): number {
 
 export type DeliveryQuote = {
   feeCents: number;
+  /** Where we measured to. Null when the address could not be resolved. */
+  destination: LatLng | null;
+  /** Where we measured from. */
+  origin: LatLng | null;
   /** Null when we could not work out a distance. */
   miles: number | null;
   /** True when the fee came from the restaurant's flat rate instead. */
@@ -377,6 +381,8 @@ export async function deliveryQuote(input: {
     miles: null,
     estimated: true,
     outOfRange: false,
+    destination: null,
+    origin: null,
   };
 
   if (!geocodeConfigured()) {
@@ -448,6 +454,8 @@ export async function deliveryQuote(input: {
       miles: Number(miles.toFixed(1)),
       estimated: false,
       outOfRange: true,
+      destination: { lat: to.lat, lng: to.lng },
+      origin: { lat: from.lat, lng: from.lng },
       reason: `That address is ${miles.toFixed(1)} miles away; we deliver within ${DELIVERY.maxMiles}`,
     };
   }
@@ -457,6 +465,8 @@ export async function deliveryQuote(input: {
     miles: Number(miles.toFixed(1)),
     estimated: false,
     outOfRange: false,
+    destination: { lat: to.lat, lng: to.lng },
+    origin: { lat: from.lat, lng: from.lng },
     reason: "Calculated from the distance to your address",
   };
 }

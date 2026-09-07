@@ -46,10 +46,14 @@ function securityHeaders(res: NextResponse, nonce: string): NextResponse {
     // 'strict-dynamic' lets Next's own bundle load its chunks once the entry
     // script is trusted by nonce, so no host allowlist is needed for our code.
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https: 'unsafe-inline'`,
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    // cdnjs serves Leaflet's stylesheet alongside its script.
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com",
     "font-src 'self' https://fonts.gstatic.com data:",
-    // Food photography, plus the data: URIs the placeholder gradients use.
-    "img-src 'self' data: blob: https://www.themealdb.com https://*.stripe.com",
+    // Food photography, the data: URIs the placeholder gradients use, and
+    // MapTiler's raster tiles. Raster rather than vector precisely so this
+    // stays an img-src addition — MapLibre's vector styles would need
+    // worker-src and blob:, which is a lot of CSP to spend on a nicer map.
+    "img-src 'self' data: blob: https://www.themealdb.com https://*.stripe.com https://api.maptiler.com",
     // Stripe.js needs to reach its API; everything else is same-origin.
     "connect-src 'self' https://api.stripe.com",
     // Stripe Elements and the hosted onboarding render in an iframe.

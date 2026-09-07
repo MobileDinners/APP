@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { formatCents } from "@/lib/money";
 import type { Order, OrderState } from "@/lib/types";
 import { useLive } from "./useLive";
+import { DeliveryMap } from "./DeliveryMap";
 import { FoodPhoto } from "./FoodPhoto";
 import { BackIcon, CheckIcon, StarIcon } from "./icons";
 
@@ -28,7 +29,17 @@ const PICKUP_STEPS: { state: OrderState; label: string; blurb: string }[] = [
   { state: "COMPLETED", label: "Picked up", blurb: "Enjoy" },
 ];
 
-export function TrackClient({ order }: { order: Order }) {
+export function TrackClient({
+  order,
+  restaurant,
+  mapKey,
+}: {
+  order: Order;
+  /** The restaurant's geocoded location, for the map. Null if unresolved. */
+  restaurant: { name: string; lat: number | null; lng: number | null };
+  /** MapTiler key. Empty string when no provider is configured. */
+  mapKey: string;
+}) {
   useLive({ orderId: order.orderId });
   const [now, setNow] = useState<number | null>(null);
 
@@ -62,7 +73,27 @@ export function TrackClient({ order }: { order: Order }) {
   return (
     <main className="pb-tabs">
       <div className="relative">
-        <RouteMap progress={progress} done={done} />
+        {/* A delivery with real coordinates gets a real map. Anything else —
+            a pickup order, or one placed before geocoding existed — keeps the
+            stylised route, which is honest about being illustrative. */}
+        {order.fulfillment === "delivery" &&
+        order.addressLat !== null &&
+        order.addressLng !== null ? (
+          <DeliveryMap
+            restaurant={
+              restaurant.lat !== null && restaurant.lng !== null
+                ? { lat: restaurant.lat, lng: restaurant.lng }
+                : null
+            }
+            destination={{ lat: order.addressLat, lng: order.addressLng }}
+            restaurantName={restaurant.name}
+            address={order.address}
+            miles={null}
+            apiKey={mapKey}
+          />
+        ) : (
+          <RouteMap progress={progress} done={done} />
+        )}
         <Link
           href="/"
           aria-label="Back"

@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getOrder } from "@/lib/orders";
+import { getOrder, getRestaurantById } from "@/lib/orders";
 import { getSession } from "@/lib/auth";
 import { isPlatformAdmin } from "@/lib/site-content";
 import { TrackClient } from "@/components/TrackClient";
@@ -26,5 +26,20 @@ export default async function TrackPage({
       ? order.orgId === session.orgId || isPlatformAdmin(session.email)
       : session?.kind === "person" && order.personId === session.personId);
   if (!order || !allowed) notFound();
-  return <TrackClient order={order} />;
+
+  const org = getRestaurantById(order.orgId);
+  return (
+    <TrackClient
+      order={order}
+      restaurant={{
+        name: org?.brandName ?? "the restaurant",
+        lat: org?.lat ?? null,
+        lng: org?.lng ?? null,
+      }}
+      // Public by design: a tile key is sent to every browser that loads a
+      // map. Restrict it by HTTP referrer in the MapTiler dashboard, which is
+      // the control that actually protects it.
+      mapKey={process.env.NEXT_PUBLIC_MAPTILER_KEY ?? ""}
+    />
+  );
 }

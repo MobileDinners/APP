@@ -115,6 +115,9 @@ export type Order = {
   guestName: string;
   guestPhone: string;
   address: string;
+  /** Geocoded delivery point, for the tracking map. Null for pickup. */
+  addressLat: number | null;
+  addressLng: number | null;
   placedAt: string;
   promisedAt: string;
   lines: OrderLine[];

@@ -83,6 +83,8 @@ export async function POST(req: Request) {
    * published maximum is a promise about a short trip, not about any trip.
    */
   let quotedDeliveryFeeCents: number | undefined;
+  let addressLat: number | null = null;
+  let addressLng: number | null = null;
   if (fulfillment === "delivery") {
     const org = getRestaurantById(String(body.orgId ?? ""));
     if (org) {
@@ -102,12 +104,16 @@ export async function POST(req: Request) {
         );
       }
       quotedDeliveryFeeCents = quote.feeCents;
+      addressLat = quote.destination?.lat ?? null;
+      addressLng = quote.destination?.lng ?? null;
     }
   }
 
   try {
     const order = createOrder({
       quotedDeliveryFeeCents,
+      addressLat,
+      addressLng,
       orgId: String(body.orgId ?? ""),
       personId: session.personId,
       fulfillment,

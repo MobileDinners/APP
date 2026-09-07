@@ -270,6 +270,12 @@ function migrate(db: DatabaseSync): void {
   // Customers can hold a password as well as a phone. Nullable, because the
   // phone-and-code path predates it and those accounts have none — a person
   // may have either credential, or both.
+  // Where the order actually went. Captured from the same geocode that priced
+  // the delivery, so the map shows the point the fee was calculated from
+  // rather than re-resolving an address that may since be ambiguous.
+  ensureColumn(db, "orders", "address_lat", "REAL");
+  ensureColumn(db, "orders", "address_lng", "REAL");
+
   ensureColumn(db, "persons", "password_hash", "TEXT");
 ensureColumn(db, "persons", "marketing_sms", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "persons", "marketing_email", "INTEGER NOT NULL DEFAULT 0");
