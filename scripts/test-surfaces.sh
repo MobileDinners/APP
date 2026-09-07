@@ -272,8 +272,11 @@ if grep -q 'priced by distance from the restaurant' src/components/CheckoutClien
 else
   fail "fulfilment picker explains the fee" "copy missing from CheckoutClient"
 fi
-if grep -q 'Based on your delivery address' src/components/CheckoutClient.tsx; then
-  pass "and the fee line itself repeats it"
+# The fee line used to say a fixed "Based on your delivery address". It now
+# states the measured distance when there is one, and says "Estimated" with the
+# reason when there is not — which is the same promise kept more precisely.
+if grep -q 'mi from \${restaurant.brandName}' src/components/CheckoutClient.tsx    && grep -q 'Estimated' src/components/CheckoutClient.tsx; then
+  pass "and the fee line says where the number came from"
 else
   fail "fee line explains itself" "copy missing from CheckoutClient"
 fi

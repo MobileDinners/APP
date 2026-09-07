@@ -185,6 +185,119 @@ export async function geocode(address: string): Promise<GeocodeResult | null> {
 }
 
 /* ------------------------------------------------------------------ *
+ * Validation
+ * ------------------------------------------------------------------ */
+
+export type AddressCheck =
+  | { ok: true; lat: number; lng: number; formatted: string }
+  /** The address is the problem, and the owner can fix it. */
+  | { ok: false; fixable: true; reason: string }
+  /** We are the problem — provider down, no key, quota gone. Do not block. */
+  | { ok: false; fixable: false; reason: string };
+
+/**
+ * Is this address good enough to price deliveries from, for years?
+ *
+ * A restaurant types its address once at signup and every delivery fee is
+ * measured from it afterwards. "1142 Mission St" resolves confidently to a
+ * Mission Street 348 miles away, and nothing downstream can recover from that
+ * — so this is the one moment worth being strict.
+ *
+ * The check that matters is AMBIGUITY, which confidence cannot express.
+ * OpenCage scores precision: how tightly it pinned the thing it matched, not
+ * whether it matched the right thing. So this asks for several candidates and
+ * looks at whether they agree. Three matches within a few miles of each other
+ * is one place described loosely. Three matches in three states is a street
+ * name that exists everywhere, and the top hit is a coin toss.
+ *
+ * The distinction between `fixable` and not is the whole point of the type. A
+ * bad address is the owner's to fix and they should be told. A geocoder that
+ * is down is ours, and blocking a restaurant from signing up over it would be
+ * absurd — signup is the highest-friction screen in the product and losing an
+ * owner there costs far more than an imprecise delivery fee.
+ */
+export async function validateAddress(address: string): Promise<AddressCheck> {
+  const trimmed = address.trim();
+  if (trimmed.length < 8) {
+    return {
+      ok: false,
+      fixable: true,
+      reason: "That address looks incomplete. Include the street, city and state.",
+    };
+  }
+
+  const key = apiKey();
+  if (!key) {
+    return { ok: false, fixable: false, reason: "No geocoding provider is configured" };
+  }
+
+  const url =
+    `${ENDPOINT}?q=${encodeURIComponent(trimmed)}&key=${encodeURIComponent(key)}` +
+    `&countrycode=us&limit=5&no_annotations=1`;
+
+  let data: {
+    results?: { geometry?: LatLng; formatted?: string; confidence?: number }[];
+  };
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(8_000) });
+    if (!res.ok) {
+      console.error(`[geocode] validation call returned ${res.status}`);
+      return { ok: false, fixable: false, reason: "The address checker is unavailable" };
+    }
+    data = await res.json();
+  } catch (err) {
+    console.error("[geocode] validation failed", err);
+    return { ok: false, fixable: false, reason: "The address checker is unavailable" };
+  }
+
+  const results = (data.results ?? []).filter((r) => r.geometry);
+  if (results.length === 0) {
+    return {
+      ok: false,
+      fixable: true,
+      reason: "We could not find that address. Check the street, city and state.",
+    };
+  }
+
+  const best = results[0]!;
+  if ((best.confidence ?? 0) < MIN_CONFIDENCE) {
+    return {
+      ok: false,
+      fixable: true,
+      reason:
+        "That address is not precise enough to measure deliveries from. " +
+        "Add the street number, city, state and ZIP.",
+    };
+  }
+
+  // Candidates scattered across the country mean the name is not unique.
+  const AGREEMENT_MILES = 20;
+  const disagreeing = results
+    .slice(1)
+    .filter((r) => haversineMiles(best.geometry!, r.geometry!) > AGREEMENT_MILES);
+  if (disagreeing.length > 0) {
+    return {
+      ok: false,
+      fixable: true,
+      reason:
+        `That address matches ${disagreeing.length + 1} different places. ` +
+        "Add the city, state and ZIP so we know which one.",
+    };
+  }
+
+  const resolved = {
+    lat: best.geometry!.lat,
+    lng: best.geometry!.lng,
+    confidence: best.confidence ?? 0,
+    formatted: best.formatted ?? trimmed,
+  };
+  // Warm the cache so the first delivery quote costs nothing.
+  writeCache(cacheKey(trimmed), resolved);
+
+  return { ok: true, lat: resolved.lat, lng: resolved.lng, formatted: resolved.formatted };
+}
+
+/* ------------------------------------------------------------------ *
  * Distance
  * ------------------------------------------------------------------ */
 

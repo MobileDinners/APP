@@ -102,7 +102,17 @@ const STARTER_ITEMS: Array<{
   },
 ];
 
-export function createRestaurant(input: SignupInput): SignupResult {
+export function createRestaurant(
+  input: SignupInput & {
+    /**
+     * Coordinates resolved from the address by the route before calling this.
+     * Stored so every later delivery quote measures from a fixed, verified
+     * point instead of re-resolving a string that may be ambiguous.
+     */
+     lat?: number | null;
+     lng?: number | null;
+  },
+): SignupResult {
   const db = getDb();
 
   const brandName = input.brandName?.trim() ?? "";
@@ -149,8 +159,9 @@ export function createRestaurant(input: SignupInput): SignupResult {
       `INSERT INTO orgs (
          org_id, slug, brand_name, cuisine, price_band, rating, rating_count,
          blurb, hero_hue, image_kw, promo, is_sponsored, distance_mi, address,
-         prep_base_seconds, accepting_orders, delivery_fee_cents, points_multiplier
-       ) VALUES (?,?,?,?,?,?,?,?,?,?,NULL,0,?,?,?,1,?,1.0)`,
+         prep_base_seconds, accepting_orders, delivery_fee_cents, points_multiplier,
+         lat, lng
+       ) VALUES (?,?,?,?,?,?,?,?,?,?,NULL,0,?,?,?,1,?,1.0,?,?)`,
     ).run(
       orgId,
       slug,
@@ -162,10 +173,15 @@ export function createRestaurant(input: SignupInput): SignupResult {
       `${brandName} on Mobile Dinners.`,
       Math.floor(Math.random() * 360),
       cuisine.toLowerCase(),
+      // distance_mi is a legacy display field and still a seeded value. Real
+      // distances come from lat/lng below; this stays only because the
+      // restaurant card reads it. It should go when that card does.
       Number((0.4 + Math.random() * 2.6).toFixed(1)),
       address,
       480,
       99,
+      input.lat ?? null,
+      input.lng ?? null,
     );
 
     db.prepare(
