@@ -48,10 +48,25 @@ export function geocodeConfigured(): boolean {
 export type LatLng = { lat: number; lng: number };
 
 export type GeocodeResult = LatLng & {
-  /** OpenCage's own 0-10 confidence. Below 5 the point is a town, not a door. */
+  /** OpenCage's own 0-10 confidence. See MIN_CONFIDENCE below. */
   confidence: number;
   formatted: string;
 };
+
+/**
+ * How precise a result has to be before we price a delivery from it.
+ *
+ * OpenCage's scale is a radius: 10 is within 250m, 8 within 1km, 5 within
+ * 10km, 1 is over 25km. Our whole delivery radius is 8 miles — about 13km —
+ * so a result accurate to "somewhere in this 10km circle" is not a number to
+ * charge money against. 7 (within 5km) is the floor.
+ *
+ * Anything below falls back to the flat rate, which is a worse price but an
+ * honest one. Note this measures PRECISION, not correctness: a confident match
+ * on the wrong street is still confident, which is why restaurant addresses
+ * need a city and state — see the seed.
+ */
+const MIN_CONFIDENCE = 7;
 
 /* ------------------------------------------------------------------ *
  * Cache
@@ -255,17 +270,30 @@ export async function deliveryQuote(input: {
     return { ...flat, reason: "No geocoding provider is configured" };
   }
 
-  const from =
+  const stored =
     input.restaurant.lat !== null && input.restaurant.lng !== null
-      ? { lat: input.restaurant.lat, lng: input.restaurant.lng }
-      : await geocode(input.restaurant.address);
+      ? { lat: input.restaurant.lat, lng: input.restaurant.lng, confidence: 10, formatted: "" }
+      : null;
+  const from = stored ?? (await geocode(input.restaurant.address));
   if (!from) {
     return { ...flat, reason: "Could not locate the restaurant" };
+  }
+  if (from.confidence < MIN_CONFIDENCE) {
+    // A vague restaurant address produces a confident-looking distance to the
+    // wrong place. Better a flat fee than telling a diner half a mile away
+    // that we cannot reach them.
+    return {
+      ...flat,
+      reason: "The restaurant's address is too vague to measure from",
+    };
   }
 
   const to = await geocode(input.address);
   if (!to) {
     return { ...flat, reason: "Could not locate that delivery address" };
+  }
+  if (to.confidence < MIN_CONFIDENCE) {
+    return { ...flat, reason: "That address is too vague to price exactly" };
   }
 
   const miles = haversineMiles(from, to);
