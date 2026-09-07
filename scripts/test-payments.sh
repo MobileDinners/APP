@@ -96,5 +96,9 @@ fi
 echo
 echo "=== 7. cleanup ==="
 node scripts/payments-cleanup.cjs
-chk "the sandbox account is cleared" \
-  "$(q "SELECT COUNT(*) FROM orgs WHERE stripe_account_id IS NOT NULL")" "0"
+# Sandbox accounts go; real Stripe accounts stay. This used to assert that NO
+# org had a payout account afterwards, which passed only because the cleanup
+# wiped every one — including real Connect accounts that cost a restaurant
+# owner a full identity-and-bank onboarding to recreate.
+chk "sandbox payout accounts are cleared" \
+  "$(q "SELECT COUNT(*) FROM orgs WHERE stripe_account_id LIKE 'acct_sandbox_%'")" "0"
