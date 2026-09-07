@@ -310,7 +310,13 @@ export async function deliveryQuote(input: {
    * is a real "too far". Three hundred is us getting it wrong, and the honest
    * response is the flat rate plus a note, not a refusal we cannot justify.
    */
-  const ABSURD_MILES = DELIVERY.maxMiles * 3;
+  // 150, not 24. The first attempt used three times the radius and swallowed a
+  // genuine refusal: Mountain View is 32 miles from San Francisco, which is
+  // emphatically too far to deliver, and it was being quoted at the $0.99 flat
+  // rate. Getting this wrong in that direction costs real money on every such
+  // order, where the opposite costs one lost order — so the threshold belongs
+  // out where a match is unambiguously cross-region rather than merely distant.
+  const ABSURD_MILES = 150;
   if (miles > ABSURD_MILES) {
     console.warn(
       `[geocode] implausible distance ${miles.toFixed(0)}mi between ` +
