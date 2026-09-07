@@ -298,6 +298,31 @@ export async function deliveryQuote(input: {
 
   const miles = haversineMiles(from, to);
 
+  /**
+   * An absurd distance is a bad match, not a genuine refusal.
+   *
+   * A confidence score cannot catch this: "1142 Mission St" with no city
+   * matches a real Mission Street with high confidence — just one 348 miles
+   * away. The result looks authoritative and is nonsense, and refusing on it
+   * tells a diner around the corner that we cannot reach them.
+   *
+   * So there are two different failures with two different answers. Nine miles
+   * is a real "too far". Three hundred is us getting it wrong, and the honest
+   * response is the flat rate plus a note, not a refusal we cannot justify.
+   */
+  const ABSURD_MILES = DELIVERY.maxMiles * 3;
+  if (miles > ABSURD_MILES) {
+    console.warn(
+      `[geocode] implausible distance ${miles.toFixed(0)}mi between ` +
+        `"${input.restaurant.address}" and "${input.address}" — likely an ` +
+        `ambiguous address. Falling back to the flat rate.`,
+    );
+    return {
+      ...flat,
+      reason: "We could not measure the distance reliably from this address",
+    };
+  }
+
   if (miles > DELIVERY.maxMiles) {
     return {
       feeCents: 0,
