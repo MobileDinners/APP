@@ -27,9 +27,14 @@ import { getDb } from "./db";
 
 const ENDPOINT = "https://api.opencagedata.com/geocode/v1/json";
 
-/** Both names are accepted: MAPS_API_KEY predates the provider choice. */
+/**
+ * Any of three names, because the variable got named before the provider was
+ * chosen and renaming a live environment variable is a deploy nobody needs.
+ * GEOCODE_API_KEY is what the production deployment actually uses.
+ */
 function apiKey(): string | null {
   return (
+    process.env.GEOCODE_API_KEY?.trim() ||
     process.env.OPENCAGE_API_KEY?.trim() ||
     process.env.MAPS_API_KEY?.trim() ||
     null

@@ -650,7 +650,7 @@ export function integrationStatus(): IntegrationStatus[] {
     { key: "MD_TOKEN_KEY", label: "POS token sealing key", configured: has("MD_TOKEN_KEY"), detail: mode("MD_TOKEN_KEY") },
     { key: "TWILIO_ACCOUNT_SID", label: "Twilio (SMS)", configured: has("TWILIO_ACCOUNT_SID"), detail: mode("TWILIO_ACCOUNT_SID") },
     { key: "RESEND_API_KEY", label: "Resend (email)", configured: has("RESEND_API_KEY"), detail: mode("RESEND_API_KEY") },
-    { key: "MAPS_API_KEY", label: "Maps / geocoding", configured: has("MAPS_API_KEY"), detail: mode("MAPS_API_KEY") },
+    { key: "GEOCODE_API_KEY", label: "Geocoding (OpenCage)", configured: has("GEOCODE_API_KEY") || has("OPENCAGE_API_KEY") || has("MAPS_API_KEY"), detail: has("GEOCODE_API_KEY") ? mode("GEOCODE_API_KEY") : has("OPENCAGE_API_KEY") ? "set as OPENCAGE_API_KEY" : has("MAPS_API_KEY") ? "set as MAPS_API_KEY" : "not set — delivery fees fall back to a flat rate" },
     { key: "MD_DATA_DIR", label: "Persistent disk", configured: has("MD_DATA_DIR"), detail: has("MD_DATA_DIR") ? process.env.MD_DATA_DIR! : "EPHEMERAL — data is lost on restart" },
     { key: "MD_ADMIN_EMAILS", label: "Admin allowlist", configured: has("MD_ADMIN_EMAILS"), detail: has("MD_ADMIN_EMAILS") ? `${process.env.MD_ADMIN_EMAILS!.split(",").length} admin(s)` : "not set — nobody can administer in production" },
     { key: "MD_OTP_TEST_NUMBERS", label: "Pinned test numbers", configured: has("MD_OTP_TEST_NUMBERS"), detail: has("MD_OTP_TEST_NUMBERS") ? `${process.env.MD_OTP_TEST_NUMBERS!.split(",").length} number(s)` : "not set" },

@@ -2,11 +2,21 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { computeTotals, formatCents, pointsToCents } from "@/lib/money";
 import { CardForm, type CardFormProps } from "./CardForm";
 import type { Fulfillment, Order, Restaurant, Wallet } from "@/lib/types";
 import { useCart } from "./CartProvider";
+
+/**
+ * The diner's delivery address.
+ *
+ * Hard-coded for now — there is no address entry yet, and the API defaults to
+ * the same string. Defining it once here means the quote, the summary line and
+ * the order all use the same value; when a real address field arrives this
+ * becomes state and nothing else has to change.
+ */
+const ADDRESS = "742 Elm St, Apt 4B";
 import { UpsellRail } from "./UpsellRail";
 import type { Suggestion } from "@/lib/upsell-types";
 import { FoodPhoto } from "./FoodPhoto";
@@ -36,6 +46,54 @@ export function CheckoutClient({
   const [pay, setPay] = useState<CardFormProps | null>(null);
 
   const restaurant = restaurants.find((r) => r.orgId === cart.orgId) ?? null;
+
+  /**
+   * The real delivery quote for this address.
+   *
+   * The page used to show the restaurant's flat rate beside a seeded random
+   * distance while the orders route charged a geocoded one — so with a
+   * geocoding key configured, checkout displayed one number and took another.
+   * This asks the server what it will actually charge, and everything below
+   * renders that.
+   */
+  const [quote, setQuote] = useState<{
+    feeCents: number;
+    miles: number | null;
+    estimated: boolean;
+    outOfRange: boolean;
+    reason: string;
+  } | null>(null);
+  const [quoting, setQuoting] = useState(false);
+
+  useEffect(() => {
+    if (!restaurant || fulfillment !== "delivery") {
+      setQuote(null);
+      return;
+    }
+    let cancelled = false;
+    setQuoting(true);
+    void (async () => {
+      try {
+        const res = await fetch("/api/delivery/quote", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orgId: restaurant.orgId, address: ADDRESS }),
+        });
+        const d = await res.json();
+        if (!cancelled && res.ok) setQuote(d);
+      } catch {
+        // Leave the quote null; the flat rate below is the honest fallback.
+      } finally {
+        if (!cancelled) setQuoting(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [restaurant, fulfillment]);
+
+  /** What we will actually charge: the quote if we have one, else the flat rate. */
+  const deliveryFeeCents = quote?.feeCents ?? restaurant?.deliveryFeeCents ?? 0;
   const maxRedeemable = wallet
     ? Math.min(wallet.pointsBalance, Math.floor(subtotalCents))
     : 0;
@@ -47,12 +105,12 @@ export function CheckoutClient({
     return computeTotals({
       subtotalCents,
       fulfillment,
-      deliveryFeeCents: restaurant?.deliveryFeeCents ?? 0,
+      deliveryFeeCents,
       tipCents,
       pointsToRedeem,
       tierMultiplier: restaurant?.pointsMultiplier ?? 1,
     });
-  }, [subtotalCents, fulfillment, tipPercent, pointsToRedeem, restaurant]);
+  }, [subtotalCents, fulfillment, tipPercent, pointsToRedeem, restaurant, deliveryFeeCents]);
 
   /**
    * The checkout button. For a signed-out diner this opens verification rather
@@ -300,9 +358,17 @@ export function CheckoutClient({
             >
               <span className="block text-[15px] font-extrabold capitalize">{f}</span>
               <span className="num mt-0.5 block text-[13px] text-ink-2">
-                {f === "delivery"
-                  ? `${formatCents(restaurant.deliveryFeeCents)} · ${restaurant.distanceMi} mi`
-                  : "No delivery fee"}
+                {f !== "delivery"
+                  ? "No delivery fee"
+                  : quoting
+                    ? "Checking…"
+                    : quote?.outOfRange
+                      ? "Too far to deliver"
+                      : `${formatCents(deliveryFeeCents)}${
+                          quote?.miles !== null && quote?.miles !== undefined
+                            ? ` · ${quote.miles} mi`
+                            : ""
+                        }`}
               </span>
             </button>
           ))}
@@ -311,7 +377,7 @@ export function CheckoutClient({
           <p className="mt-3 flex items-start gap-2 rounded-[12px] bg-card-2 px-3 py-2.5 text-[14px]">
             <PinIcon className="mt-0.5 h-4 w-4 shrink-0 text-brand-strong" />
             <span>
-              <span className="font-bold">742 Elm St, Apt 4B</span>
+              <span className="font-bold">{ADDRESS}</span>
               <br />
               <span className="text-ink-2">“Buzzer broken, call me”</span>
             </span>
@@ -375,7 +441,13 @@ export function CheckoutClient({
           <Row
             label="Delivery fee"
             value={formatCents(totals.deliveryFeeCents)}
-            note={`Based on your delivery address — ${restaurant.distanceMi} mi from ${restaurant.brandName}`}
+            note={
+              quote && !quote.estimated && quote.miles !== null
+                ? `${quote.miles} mi from ${restaurant.brandName}`
+                : // Say it is an estimate rather than implying a measurement
+                  // nobody made. The fallback is the restaurant's flat rate.
+                  `Estimated — ${quote?.reason ?? "no delivery address yet"}`
+            }
           />
         )}
         <Row label="Service fee" value={formatCents(0)} green />
