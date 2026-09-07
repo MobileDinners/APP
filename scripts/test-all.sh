@@ -2,7 +2,7 @@
 # Runs every suite and reports one tally. Exits non-zero if anything failed.
 set -o pipefail
 OUT=$(mktemp)
-for s in auth menu additem optimizer crm campaigns upsell site pos payments delivery surfaces; do
+for s in auth menu additem optimizer crm campaigns upsell site content admin pos payments delivery surfaces; do
   bash "scripts/test-$s.sh"
 done | tee "$OUT"
 

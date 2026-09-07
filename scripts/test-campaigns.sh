@@ -2,7 +2,7 @@
 # Campaigns: guardrails, consent suppression, and the part that decides whether
 # this module is worth anything — does the incrementality estimator recover a
 # lift we injected, and does it correctly report nothing when there is nothing?
-B=http://localhost:3100
+B=${MD_TEST_BASE:-http://localhost:3100}
 OWNER=/tmp/md_cmp_owner; LEAD=/tmp/md_cmp_lead
 rm -f $OWNER $LEAD
 mkdir -p .tmp-test

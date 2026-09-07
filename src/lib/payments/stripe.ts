@@ -34,6 +34,32 @@ function secretKey(): string {
       "not_configured",
     );
   }
+
+  /**
+   * A live key outside production is refused.
+   *
+   * This is the mirror of the rule the sandbox providers follow — they refuse
+   * to run IN production — and it exists because the mistake is so easy and so
+   * expensive. A live key in .env.local means a laptop running `npm run dev`,
+   * with test data and deliberately broken states, is wired to an account that
+   * moves real money off real cards. It has already happened once on this
+   * project: the first keys pasted in were pk_live/sk_live on a verified
+   * entity with charges enabled.
+   *
+   * Nothing about the code can tell a test charge from a real one at that
+   * point. The only safe moment to catch it is here, before the first call.
+   */
+  if (key.startsWith("sk_live_") && process.env.NODE_ENV !== "production") {
+    throw new PaymentError(
+      "Refusing to use a LIVE Stripe key outside production. This would charge " +
+        "real cards from a development environment. Use the sk_test_… key from " +
+        "the dashboard with Test mode on, or set NODE_ENV=production if this " +
+        "really is your production deployment.",
+      500,
+      "live_key_in_development",
+    );
+  }
+
   return key;
 }
 
@@ -86,6 +112,100 @@ async function call<T>(
   return json as T;
 }
 
+/**
+ * The Accounts v2 API.
+ *
+ * Different enough from v1 to need its own caller: JSON rather than form
+ * encoding, and a pinned Stripe-Version, because v2 is versioned by date and
+ * an unpinned request would change shape underneath us on Stripe's schedule.
+ *
+ * Why v2 at all: Stripe now refuses v1 account creation for new Connect
+ * integrations. There is a compatibility switch in the dashboard, but it did
+ * not apply to sandbox environments and it is a shim on a deprecated path —
+ * building a launch on it would mean doing this migration later, under time
+ * pressure, instead of now.
+ *
+ * Only account creation and status moved. Account links still take a v2
+ * account id on the v1 endpoint, so onboarding is untouched, and PaymentIntents
+ * with transfer_data[destination] are unaffected — which is why the split
+ * logic, the card form and the checkout flow needed no changes at all.
+ */
+const V2_VERSION = "2026-08-26.dahlia";
+
+async function callV2<T>(
+  path: string,
+  init: { method: "GET" | "POST"; body?: unknown; idempotencyKey?: string },
+): Promise<T> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${secretKey()}`,
+    "Stripe-Version": V2_VERSION,
+  };
+  if (init.body !== undefined) headers["Content-Type"] = "application/json";
+  if (init.idempotencyKey) headers["Idempotency-Key"] = init.idempotencyKey;
+
+  const res = await fetch(`https://api.stripe.com/v2${path}`, {
+    method: init.method,
+    headers,
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+  });
+
+  const text = await res.text();
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new PaymentError(`Stripe returned a non-JSON response (${res.status})`, 502);
+  }
+
+  if (!res.ok) {
+    // v2 nests the error the same way v1 does, but some failures come back
+    // flat, so both shapes are read rather than assuming one.
+    const body = json as { error?: { message?: string; code?: string }; message?: string; code?: string };
+    throw new PaymentError(
+      body.error?.message ?? body.message ?? `Stripe request failed (${res.status})`,
+      res.status === 402 ? 402 : 502,
+      body.error?.code ?? body.code ?? "stripe_error",
+    );
+  }
+  return json as T;
+}
+
+/** The slice of a v2 account this integration reads. */
+type V2Account = {
+  id: string;
+  dashboard?: string;
+  configuration?: {
+    merchant?: {
+      capabilities?: {
+        card_payments?: { status?: string };
+        stripe_balance?: { payouts?: { status?: string } };
+      };
+    };
+    recipient?: {
+      capabilities?: { stripe_balance?: { stripe_transfers?: { status?: string } } };
+    };
+  };
+  requirements?: { entries?: { description?: string; awaiting_action_from?: string }[] };
+};
+
+function v2Status(acct: V2Account): AccountStatus {
+  const caps = acct.configuration?.merchant?.capabilities;
+  const transfers =
+    acct.configuration?.recipient?.capabilities?.stripe_balance?.stripe_transfers?.status;
+  return {
+    accountId: acct.id,
+    chargesEnabled: caps?.card_payments?.status === "active",
+    // "Can we pay them?" is the transfers capability, not the payouts one.
+    // payouts covers money leaving Stripe for their bank, which lags and is
+    // not what checkout depends on.
+    payoutsEnabled: transfers === "active",
+    // v2 returns structured requirement entries rather than v1's flat strings.
+    requirements: (acct.requirements?.entries ?? [])
+      .map((e) => e.description)
+      .filter((d): d is string => Boolean(d)),
+  };
+}
+
 /** Stripe's intent statuses map almost one-to-one; `requires_action` is ours. */
 function toStatus(s: string): PaymentStatus {
   switch (s) {
@@ -122,19 +242,49 @@ export const stripeProvider: PaymentProvider = {
   id: "stripe",
 
   async createAccount({ orgId, brandName, email, country }) {
-    const acct = await call<StripeAccount>("/accounts", {
+    const acct = await callV2<V2Account>("/core/accounts", {
       method: "POST",
-      body: form({
-        type: "express",
-        country,
-        email,
-        "business_profile[name]": brandName,
-        "business_profile[product_description]": "Restaurant food orders",
-        "capabilities[card_payments][requested]": "true",
-        "capabilities[transfers][requested]": "true",
-        "metadata[org_id]": orgId,
-      }),
-      idempotencyKey: `acct-${orgId}`,
+      body: {
+        contact_email: email,
+        display_name: brandName,
+        identity: { country: country.toLowerCase(), entity_type: "company" },
+        configuration: {
+          // merchant lets the account be charged; recipient lets it be PAID.
+          // Both are needed, and the second is easy to miss: without
+          // stripe_transfers, creating the PaymentIntent fails at checkout
+          // with insufficient_capabilities_for_transfer — long after
+          // onboarding looked complete and every requirement was cleared.
+          merchant: { capabilities: { card_payments: { requested: true } } },
+          recipient: {
+            capabilities: { stripe_balance: { stripe_transfers: { requested: true } } },
+          },
+        },
+        // Express dashboards require the platform to own fees and losses.
+        // Stripe rejects the combination outright otherwise, which is a
+        // reasonable thing to be strict about: it decides who pays for a
+        // chargeback.
+        defaults: {
+          responsibilities: {
+            fees_collector: "application",
+            losses_collector: "application",
+          },
+        },
+        dashboard: "express",
+        metadata: { org_id: orgId },
+        include: ["configuration.merchant", "configuration.recipient", "requirements"],
+      },
+      // The key carries the request SHAPE, not just the org.
+      //
+      // Stripe refuses a reused key whose parameters have changed, and it
+      // refuses it forever. A key of `acct-<orgId>` was therefore permanently
+      // poisoned by the v1-to-v2 migration: the org could never get an account
+      // again, on an endpoint whose whole job is creating one.
+      //
+      // Duplicate accounts are already prevented a level up — the route only
+      // calls this when no account id is stored — so this key exists to make a
+      // concurrent double-submit safe, and bumping the version when the body
+      // changes keeps it from becoming a permanent lock.
+      idempotencyKey: `acct-v2-${orgId}`,
     });
     return acct.id;
   },
@@ -156,16 +306,12 @@ export const stripeProvider: PaymentProvider = {
   },
 
   async accountStatus(accountId): Promise<AccountStatus> {
-    const acct = await call<StripeAccount>(`/accounts/${accountId}`, { method: "GET" });
-    return {
-      accountId: acct.id,
-      chargesEnabled: acct.charges_enabled,
-      payoutsEnabled: acct.payouts_enabled,
-      requirements: [
-        ...(acct.requirements?.past_due ?? []),
-        ...(acct.requirements?.currently_due ?? []),
-      ],
-    };
+    const acct = await callV2<V2Account>(
+      `/core/accounts/${accountId}?include=configuration.merchant` +
+        "&include=configuration.recipient&include=requirements",
+      { method: "GET" },
+    );
+    return v2Status(acct);
   },
 
   async createIntent(input: CreateIntentInput): Promise<PaymentIntent> {
@@ -188,9 +334,11 @@ export const stripeProvider: PaymentProvider = {
         "metadata[order_id]": input.orderId,
         ...meta,
       }),
-      // Keyed on the order, so a retried checkout returns the same intent
-      // instead of creating a second one.
-      idempotencyKey: `pi-${input.orderId}`,
+      // A fresh key per attempt. Reuse of an existing intent is handled a
+      // level up in checkout.ts, which can tell "the same request again" from
+      // "a new attempt after a failure" — Stripe cannot, and replays a saved
+      // error for 24 hours, which strands the order.
+      idempotencyKey: `pi-${input.orderId}-${Date.now().toString(36)}`,
     });
 
     return {

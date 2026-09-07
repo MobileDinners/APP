@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { splitPayment } from "./payments/split";
+import { paymentsConfigured } from "./payments";
 import { getDb } from "./db";
 import { publish } from "./events";
 import { computeTotals } from "./money";
@@ -103,16 +104,44 @@ function toItem(r: ItemRow): MenuItem {
   };
 }
 
-export function listRestaurants(): Restaurant[] {
+/**
+ * Restaurants a diner may order from.
+ *
+ * `accepting_orders = 0` used to be checked in exactly one place — createOrder
+ * — so a restaurant switched off still appeared in the feed, in search and on
+ * the homepage. A diner could browse it, build a whole cart and only discover
+ * at checkout that it would not take the order. That is the worst possible
+ * moment to find out.
+ *
+ * Hidden restaurants are therefore excluded HERE, at the read, so switching one
+ * off removes it from every consumer surface at once. `includeHidden` exists
+ * for the two callers that legitimately need the full list: the cart, which
+ * must still render an in-progress order for a restaurant that has just gone
+ * dark, and anything administrative. The admin dashboard does not use this
+ * function at all — it queries orgs directly, precisely because it must see
+ * what diners cannot.
+ */
+export function listRestaurants(opts: { includeHidden?: boolean } = {}): Restaurant[] {
   const rows = getDb()
-    .prepare("SELECT * FROM orgs ORDER BY distance_mi ASC")
+    .prepare(
+      opts.includeHidden
+        ? "SELECT * FROM orgs ORDER BY distance_mi ASC"
+        : "SELECT * FROM orgs WHERE accepting_orders = 1 ORDER BY distance_mi ASC",
+    )
     .all() as unknown as OrgRow[];
   return rows.map(toRestaurant);
 }
 
-export function getRestaurant(slug: string): Restaurant | null {
+export function getRestaurant(
+  slug: string,
+  opts: { includeHidden?: boolean } = {},
+): Restaurant | null {
   const row = getDb()
-    .prepare("SELECT * FROM orgs WHERE slug = ?")
+    .prepare(
+      opts.includeHidden
+        ? "SELECT * FROM orgs WHERE slug = ?"
+        : "SELECT * FROM orgs WHERE slug = ? AND accepting_orders = 1",
+    )
     .get(slug) as unknown as OrgRow | undefined;
   return row ? toRestaurant(row) : null;
 }
@@ -316,10 +345,14 @@ export function createOrder(input: CreateOrderInput): Order {
         subtotal_cents, discount_cents, tax_cents, tip_cents, delivery_fee_cents,
         service_fee_cents, total_cents, points_earned, points_redeemed,
         guest_name, guest_phone, address, placed_at, promised_at, idempotency_key)
-      VALUES (?, ?, ?, ?, ?, 'marketplace', ?, 'CONFIRMED', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, 'marketplace', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       orderId, input.orgId, input.personId, menuVersion.menuVersionId,
       upsellArmFor(input.personId), input.fulfillment,
+      // The state column is a projection of the event log, so it has to agree
+      // with the events appended below: PENDING_PAYMENT while a card is still
+      // owed, CONFIRMED only on the sandbox path where nothing is charged.
+      paymentsConfigured() ? "PENDING_PAYMENT" : "CONFIRMED",
       totals.subtotalCents, totals.discountCents, totals.taxCents, totals.tipCents,
       totals.deliveryFeeCents, totals.serviceFeeCents, totals.totalCents,
       totals.pointsEarned, totals.pointsRedeemed,
@@ -359,20 +392,51 @@ export function createOrder(input: CreateOrderInput): Order {
     // intent is created against the order id, which is why it has to exist
     // first.
     const split = splitPayment(totals);
-    appendEvent(
-      orderId,
-      "payment.authorized",
-      {
-        amount_cents: totals.totalCents,
-        to_restaurant_cents: split.restaurantCents,
-        to_driver_cents: split.driverTipCents,
-        platform_cents: split.platformCents,
-        commission_cents: 0,
-      },
-      "system",
-      "SYSTEM",
-    );
-    appendEvent(orderId, "order.confirmed", { state: "CONFIRMED" }, "system", "SYSTEM");
+
+    /**
+     * Whether this order is confirmed here, or waits for a card.
+     *
+     * With a real processor configured, an order MUST NOT reach CONFIRMED
+     * until money has actually moved. Until now this function appended
+     * payment.authorized and order.confirmed unconditionally — every order
+     * went to the kitchen paid, whether or not anything was charged. That was
+     * fine while there was no processor at all and dishonest the moment there
+     * is one.
+     *
+     * So: with Stripe configured the order stops at PENDING_PAYMENT and the
+     * checkout confirms a card against it. Without a processor the sandbox
+     * path is unchanged, which is what keeps a laptop and the whole existing
+     * test suite working with no keys present.
+     */
+    if (paymentsConfigured()) {
+      appendEvent(
+        orderId,
+        "payment.requested",
+        {
+          amount_cents: totals.totalCents,
+          to_restaurant_cents: split.restaurantCents,
+          to_driver_cents: split.driverTipCents,
+          platform_cents: split.platformCents,
+        },
+        "system",
+        "SYSTEM",
+      );
+    } else {
+      appendEvent(
+        orderId,
+        "payment.authorized",
+        {
+          amount_cents: totals.totalCents,
+          to_restaurant_cents: split.restaurantCents,
+          to_driver_cents: split.driverTipCents,
+          platform_cents: split.platformCents,
+          commission_cents: 0,
+        },
+        "system",
+        "SYSTEM",
+      );
+      appendEvent(orderId, "order.confirmed", { state: "CONFIRMED" }, "system", "SYSTEM");
+    }
 
     db.exec("COMMIT");
   } catch (err) {

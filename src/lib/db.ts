@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
-import { seed } from "./seed";
+import { ensurePlatformAdmin, seed } from "./seed";
 
 /**
  * Local-first store. In production this is Postgres 16 with row-level
@@ -25,6 +25,9 @@ function open(): DatabaseSync {
   db.exec("PRAGMA foreign_keys = ON");
   migrate(db);
   seed(db);
+  // Every boot, not just an empty one: a managed host has no shell, so setting
+  // MD_ADMIN_PASSWORD and redeploying is the only way to create this account.
+  ensurePlatformAdmin(db);
   return db;
 }
 
@@ -460,6 +463,73 @@ ensureColumn(db, "persons", "marketing_sms", "INTEGER NOT NULL DEFAULT 0");
       updated_at        TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_pos_push_status ON pos_order_push(org_id, status);
+
+    -- What a restaurant pays us every month.
+    --
+    -- This is the whole business model — 0% commission means the subscription
+    -- IS the revenue — and until now it existed only as prose on the pricing
+    -- page. Without it there is no MRR, no ARR, no billing history and no way
+    -- to answer "who has not paid", so the admin dashboard had nothing real to
+    -- compute from.
+    --
+    -- price_cents is stored per subscription rather than looked up from the
+    -- plan, because a negotiated Enterprise rate and a grandfathered price are
+    -- both normal and neither survives a price-list change.
+    CREATE TABLE IF NOT EXISTS subscriptions (
+      org_id               TEXT PRIMARY KEY REFERENCES orgs(org_id),
+      plan                 TEXT NOT NULL CHECK (plan IN ('starter','growth','scale','enterprise')),
+      status               TEXT NOT NULL CHECK (status IN ('trialing','active','past_due','canceled')),
+      -- Normalised to a MONTHLY figure so MRR is a sum, not a case statement.
+      price_cents          INTEGER NOT NULL,
+      interval             TEXT NOT NULL CHECK (interval IN ('month','year')),
+      trial_ends_at        TEXT,
+      current_period_end   TEXT,
+      canceled_at          TEXT,
+      stripe_subscription_id TEXT,
+      created_at           TEXT NOT NULL,
+      updated_at           TEXT NOT NULL
+    );
+
+    -- One row per billing attempt, successful or not. Failed rows are the
+    -- point: a subscription business dies of silent card failures, so they
+    -- have to be visible rather than inferred from an absence.
+    CREATE TABLE IF NOT EXISTS subscription_invoices (
+      invoice_id      TEXT PRIMARY KEY,
+      org_id          TEXT NOT NULL REFERENCES orgs(org_id),
+      amount_cents    INTEGER NOT NULL,
+      refunded_cents  INTEGER NOT NULL DEFAULT 0,
+      status          TEXT NOT NULL CHECK (status IN ('paid','failed','refunded','open')),
+      period_start    TEXT NOT NULL,
+      period_end      TEXT NOT NULL,
+      paid_at         TEXT,
+      failure_reason  TEXT,
+      stripe_invoice_id TEXT,
+      created_at      TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_sub_invoices_org ON subscription_invoices(org_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_sub_invoices_status ON subscription_invoices(status);
+
+    -- Platform-wide settings an admin can change without a deploy: featured
+    -- restaurants, loyalty rules, provider toggles. One row per key holding
+    -- JSON, same shape as site_content and for the same reason — the DEFAULTS
+    -- live in code, so an empty table is a working platform.
+    CREATE TABLE IF NOT EXISTS admin_settings (
+      key        TEXT PRIMARY KEY,
+      value      TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      updated_by TEXT NOT NULL
+    );
+
+    -- Editable copy for the platform's own site: header nav, footer, taglines.
+    -- One row, holding a JSON override. The DEFAULTS live in site-content.ts,
+    -- not here, so an empty table renders the site that ships in the repo
+    -- rather than a page with no navigation.
+    CREATE TABLE IF NOT EXISTS site_content (
+      key        TEXT PRIMARY KEY,
+      value      TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      updated_by TEXT NOT NULL
+    );
   `);
 }
 

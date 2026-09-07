@@ -14,7 +14,9 @@ export default async function CartPage() {
   return (
     <CheckoutClient
       wallet={person ? getWallet(person.personId) : null}
-      restaurants={listRestaurants()}
+      // includeHidden: a cart built before the restaurant went dark must still
+      // render. createOrder gives the real refusal at checkout.
+      restaurants={listRestaurants({ includeHidden: true })}
     />
   );
 }

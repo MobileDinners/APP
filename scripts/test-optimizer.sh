@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Menu optimizer: guardrails, role checks, and the property that matters —
 # accepting a suggestion edits the DRAFT and never the live menu.
-B=http://localhost:3100
+B=${MD_TEST_BASE:-http://localhost:3100}
 OWNER=/tmp/md_opt_owner; LEAD=/tmp/md_opt_lead
 rm -f $OWNER $LEAD
 

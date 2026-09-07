@@ -2,6 +2,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { OptionGroup, Station } from "./types";
 import { hashPassword } from "./password";
 import { contentHashOf, toSnapshotItem } from "./menu-snapshot";
+import { PLATFORM_ADMIN_EMAIL, PLATFORM_ORG_ID, PLATFORM_ORG_SLUG } from "./platform";
 
 /** Shared across the seeded demo accounts. Development convenience only. */
 export const DEMO_PASSWORD = "dinner1234";
@@ -399,4 +400,193 @@ export function seed(db: DatabaseSync): void {
     "staff_sunrise_lead", "org_sunrise", "lead@sunrise-taqueria.test",
     "Sam Ortiz", "shift_lead", hash, now,
   );
+
+  seedBilling(db);
+}
+
+/* ------------------------------------------------------------------ *
+ * Billing
+ * ------------------------------------------------------------------ */
+
+/**
+ * Subscriptions and a year of invoices for the demo restaurants.
+ *
+ * Separate from seed() and idempotent, because the billing tables arrived long
+ * after the orgs did: an existing database has restaurants but no
+ * subscriptions, and seed() returns early the moment it finds an org. This is
+ * called from both seed() and scripts/seed-billing.mjs so a fresh install and
+ * an existing one end up in the same place.
+ *
+ * The mix is deliberate rather than uniform. One restaurant is past_due and
+ * one is trialing, so the dashboard shows the distinction that matters — a
+ * trial is not revenue and a failed card is not a cancellation — instead of
+ * six identical green rows that prove nothing.
+ */
+export function seedBilling(db: DatabaseSync): boolean {
+  const already = db.prepare("SELECT COUNT(*) AS n FROM subscriptions").get() as { n: number };
+  if (already.n > 0) return false;
+
+  const orgs = db.prepare("SELECT org_id FROM orgs").all() as { org_id: string }[];
+  if (orgs.length === 0) return false;
+
+  // price_cents is the MONTHLY equivalent; annual bills at the published rate
+  // and monthly is 20% higher, matching the pricing page.
+  const PLANS: Record<string, { plan: string; status: string; monthly: number; interval: string }> = {
+    org_sunrise:  { plan: "growth",  status: "active",   monthly: 29900, interval: "year" },
+    org_baohaus:  { plan: "growth",  status: "active",   monthly: 29900, interval: "year" },
+    org_noodlebar:{ plan: "starter", status: "active",   monthly: 11880, interval: "month" },
+    org_ellery:   { plan: "scale",   status: "active",   monthly: 59900, interval: "year" },
+    org_saffron:  { plan: "starter", status: "past_due", monthly: 11880, interval: "month" },
+    org_pie:      { plan: "growth",  status: "trialing", monthly: 29900, interval: "year" },
+  };
+
+  const now = new Date();
+  const iso = (d: Date) => d.toISOString();
+  const addMonths = (d: Date, n: number) => {
+    const x = new Date(d);
+    x.setMonth(x.getMonth() + n);
+    return x;
+  };
+
+  const insSub = db.prepare(`
+    INSERT INTO subscriptions (org_id, plan, status, price_cents, interval, trial_ends_at,
+                               current_period_end, canceled_at, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
+  `);
+  const insInv = db.prepare(`
+    INSERT INTO subscription_invoices (invoice_id, org_id, amount_cents, refunded_cents, status,
+                                       period_start, period_end, paid_at, failure_reason, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  let seq = 0;
+  for (const { org_id } of orgs) {
+    const p = PLANS[org_id];
+    if (!p) continue;
+
+    const started = addMonths(now, -11);
+    insSub.run(
+      org_id, p.plan, p.status, p.monthly, p.interval,
+      p.status === "trialing" ? iso(addMonths(now, 1)) : null,
+      iso(addMonths(now, 1)),
+      iso(started), iso(now),
+    );
+
+    // A trial has never been billed, so it gets no invoice history at all.
+    if (p.status === "trialing") continue;
+
+    for (let m = 11; m >= 0; m--) {
+      const periodStart = addMonths(now, -m);
+      const periodEnd = addMonths(periodStart, 1);
+      // The past_due restaurant's most recent attempt is the one that failed;
+      // everything before it was paid, which is what a real card expiry looks
+      // like. One older refund gives the refunds view something true to show.
+      const failed = p.status === "past_due" && m === 0;
+      const refunded = org_id === "org_noodlebar" && m === 7;
+      insInv.run(
+        `inv_seed_${(seq++).toString(36).padStart(6, "0")}`,
+        org_id,
+        p.monthly,
+        refunded ? p.monthly : 0,
+        failed ? "failed" : refunded ? "refunded" : "paid",
+        iso(periodStart),
+        iso(periodEnd),
+        failed ? null : iso(periodStart),
+        failed ? "card_declined: insufficient funds" : null,
+        iso(periodStart),
+      );
+    }
+  }
+  return true;
+}
+
+/* ------------------------------------------------------------------ *
+ * Platform administrator
+ * ------------------------------------------------------------------ */
+
+/**
+ * Creates or updates the platform administrator, when a password is supplied.
+ *
+ * Runs on EVERY boot rather than only on an empty database, because a managed
+ * host gives you no shell: on Render there is nowhere to run a script, so the
+ * only way this account can exist is for the application to make it. Setting
+ * MD_ADMIN_PASSWORD in the environment and redeploying is the whole procedure.
+ *
+ * Idempotent, and fails closed: with no MD_ADMIN_PASSWORD nothing happens at
+ * all. It will not invent a password, because an account whose credential was
+ * generated by a process nobody watched is an account nobody can use — and if
+ * it were derived from anything in this source it would be public, since the
+ * repository is.
+ *
+ * The demo password is refused outright for the same reason.
+ */
+export function ensurePlatformAdmin(db: DatabaseSync): void {
+  const password = process.env.MD_ADMIN_PASSWORD?.trim();
+  if (!password) return;
+
+  if (password === DEMO_PASSWORD) {
+    console.error(
+      "[admin] MD_ADMIN_PASSWORD is the demo password, which is published in " +
+        "this repository. Refusing to create the platform administrator with it.",
+    );
+    return;
+  }
+  if (password.length < 12) {
+    console.error(
+      `[admin] MD_ADMIN_PASSWORD is ${password.length} characters; the minimum is 12. ` +
+        "Refusing to create the platform administrator.",
+    );
+    return;
+  }
+
+  const now = new Date().toISOString();
+
+  const orgExists = (
+    db.prepare("SELECT COUNT(*) AS n FROM orgs WHERE org_id = ?").get(PLATFORM_ORG_ID) as {
+      n: number;
+    }
+  ).n;
+  if (!orgExists) {
+    db.prepare(
+      `INSERT INTO orgs (org_id, slug, brand_name, cuisine, price_band, rating,
+                         rating_count, blurb, hero_hue, image_kw, promo, is_sponsored,
+                         distance_mi, address, prep_base_seconds, accepting_orders,
+                         delivery_fee_cents, points_multiplier)
+       VALUES (?, ?, ?, ?, ?, 0, 0, ?, 0, 'food', NULL, 0, 0, ?, 0, 0, 0, 1.0)`,
+    ).run(
+      PLATFORM_ORG_ID,
+      PLATFORM_ORG_SLUG,
+      "Mobile Dinners",
+      "Platform",
+      "$",
+      "The platform itself. Not a restaurant, and not listed anywhere.",
+      "—",
+    );
+  }
+
+  const hash = hashPassword(password);
+  const existing = db
+    .prepare("SELECT staff_id FROM staff WHERE email = ?")
+    .get(PLATFORM_ADMIN_EMAIL) as { staff_id: string } | undefined;
+
+  if (existing) {
+    // Re-hashed every boot so rotating the variable rotates the password.
+    db.prepare("UPDATE staff SET password_hash = ?, disabled = 0 WHERE email = ?").run(
+      hash,
+      PLATFORM_ADMIN_EMAIL,
+    );
+  } else {
+    db.prepare(
+      `INSERT INTO staff (staff_id, org_id, email, name, role, password_hash, created_at)
+       VALUES (?, ?, ?, ?, 'owner', ?, ?)`,
+    ).run(
+      "staff_platform_admin",
+      PLATFORM_ORG_ID,
+      PLATFORM_ADMIN_EMAIL,
+      "Mobile Dinners Admin",
+      hash,
+      now,
+    );
+    console.info(`[admin] created ${PLATFORM_ADMIN_EMAIL}`);
+  }
 }

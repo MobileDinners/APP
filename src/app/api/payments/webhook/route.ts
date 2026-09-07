@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
+import { markOrderPaid } from "@/lib/payments/checkout";
 import { getPaymentProvider, paymentsConfigured } from "@/lib/payments";
-import {
-  addRefund,
-  claimEvent,
-  orgIdForAccount,
-  saveConnectStatus,
-  setPaymentStatus,
-} from "@/lib/payments/store";
+import { addRefund, claimEvent, getPaymentByIntent, orgIdForAccount, saveConnectStatus, setPaymentStatus } from "@/lib/payments/store";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -50,7 +45,15 @@ export async function POST(req: Request) {
   try {
     switch (event.type) {
       case "payment_intent.succeeded":
-        if (event.intentId) setPaymentStatus(event.intentId, "succeeded");
+        if (event.intentId) {
+          // The webhook is the authoritative signal, and the only one that
+          // arrives when the diner's browser dies between confirming the card
+          // and telling us. markOrderPaid is idempotent, so the common case —
+          // both this and the client callback firing — confirms once.
+          const orderId = event.orderId ?? getPaymentByIntent(event.intentId)?.orderId;
+          if (orderId) markOrderPaid(orderId, event.intentId);
+          else setPaymentStatus(event.intentId, "succeeded");
+        }
         break;
 
       case "payment_intent.payment_failed":

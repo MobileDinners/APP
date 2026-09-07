@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # End-to-end auth checks against the running dev server.
-B=http://localhost:3100
+# Overridable so the suite can run against a server on another port, e.g.
+#   MD_TEST_BASE=http://localhost:3102 npm run test:auth
+B=${MD_TEST_BASE:-http://localhost:3100}
 J=/tmp/md_cookies
 rm -f $J /tmp/md_staff /tmp/md_bao
 
@@ -121,3 +123,63 @@ const rows = JSON.parse(fs.readFileSync('.tmp-test/bao.json','utf8')).orders;
 console.log(rows.filter(o => o.orgId !== 'org_baohaus').length);
 ")
 chk "every order Bao Haus sees belongs to Bao Haus" "$WRONG" "0"
+
+echo
+echo "=== 9. pinned test numbers ==="
+# MD_OTP_TEST_NUMBERS lets a deployed site be signed into before Twilio A2P
+# clears. It only means anything if the SERVER has the variable, so this runs
+# when the suite is invoked with it and says so plainly when it is not:
+#   MD_OTP_TEST_NUMBERS="+15555550100:424242" npm run dev   (one terminal)
+#   MD_OTP_TEST_NUMBERS="+15555550100:424242" npm run test:auth
+if [ -z "${MD_OTP_TEST_NUMBERS:-}" ]; then
+  printf "  \033[33mSKIP\033[0m MD_OTP_TEST_NUMBERS not set in this shell\n"
+else
+  PIN_NUM=$(printf '%s' "$MD_OTP_TEST_NUMBERS" | cut -d, -f1 | cut -d: -f1)
+  PIN_CODE=$(printf '%s' "$MD_OTP_TEST_NUMBERS" | cut -d, -f1 | cut -d: -f2)
+  curl -s -o /dev/null -X POST "$B/api/auth/otp/request" \
+    -H 'Content-Type: application/json' -d "{\"phone\":\"$PIN_NUM\"}"
+
+  bad=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/auth/otp/verify" \
+    -H 'Content-Type: application/json' -d "{\"phone\":\"$PIN_NUM\",\"code\":\"000000\"}")
+  chk "pinned number still rejects a wrong code" "$bad" "401"
+
+  ok=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/auth/otp/verify" \
+    -H 'Content-Type: application/json' -d "{\"phone\":\"$PIN_NUM\",\"code\":\"$PIN_CODE\"}")
+  chk "pinned number accepts its pinned code" "$ok" "200"
+
+  # An unlisted number must NOT inherit the pinned code — that would be the
+  # bypass this feature is careful not to be.
+  OTHER="4155559$(printf '%03d' $((RANDOM % 1000)))"
+  curl -s -o /dev/null -X POST "$B/api/auth/otp/request" \
+    -H 'Content-Type: application/json' -d "{\"phone\":\"$OTHER\"}"
+  leak=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$B/api/auth/otp/verify" \
+    -H 'Content-Type: application/json' -d "{\"phone\":\"$OTHER\",\"code\":\"$PIN_CODE\"}")
+  chk "an unlisted number does NOT accept the pinned code" "$leak" "401"
+fi
+
+echo
+echo "=== 10. SMS provider wiring ==="
+# With no Twilio credentials nothing is sent and the flow still works, which is
+# the state every deployment starts in. Pinned numbers must never send: they
+# are fictional, the carrier would reject them, and we would pay to find out.
+NUM="415555$(printf '%04d' $((RANDOM % 10000)))"
+RESP=$(curl -s --max-time 30 -X POST "$B/api/auth/otp/request" \
+  -H 'Content-Type: application/json' -d "{\"phone\":\"$NUM\"}")
+chk "a code is still issued with no provider configured" \
+  "$(printf '%s' "$RESP" | node -pe "JSON.parse(require('fs').readFileSync(0)).ok ? 'yes' : 'no'")" "yes"
+
+# No pinned-number request here on purpose. Section 9 already issued one and
+# the limiter allows three a minute per number, so asking again tests the rate
+# limiter and reports it as an SMS failure — passing or failing on how long
+# the run took. Section 9 already proves the pinned path end to end.
+
+# Being throttled and failing to send are different problems and must not share
+# a status: a client backing off on a 429 would wait for a code never coming.
+for i in 1 2 3 4; do
+  curl -s -o /dev/null --max-time 30 -X POST "$B/api/auth/otp/request" \
+    -H 'Content-Type: application/json' -d "{\"phone\":\"$NUM\"}"
+done
+LAST=$(curl -s --max-time 30 -X POST "$B/api/auth/otp/request" \
+  -H 'Content-Type: application/json' -d "{\"phone\":\"$NUM\"}")
+chk "throttling reports rate_limited, not a send failure" \
+  "$(printf '%s' "$LAST" | node -pe "JSON.parse(require('fs').readFileSync(0)).code ?? 'none'")" "rate_limited"

@@ -16,3 +16,6 @@ data/
 .DS_Store
 Thumbs.db
 .tmp-test/
+
+# Isolated production builds (see next.config.ts)
+.next-prod/

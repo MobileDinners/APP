@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomInt, randomUUID, timingSafeEqual } from 
 import { cookies } from "next/headers";
 import { getDb } from "./db";
 import { hashPassword, verifyPassword } from "./password";
+import { otpMessage, sendSms, smsConfigured } from "./sms";
 
 export { hashPassword, verifyPassword };
 
@@ -198,7 +199,41 @@ export function can(role: Role, action: "advance_order" | "edit_menu" | "publish
 
 export type OtpIssue = { ok: true; devCode?: string } | { ok: false; error: string };
 
-export function issueOtp(phone: string): OtpIssue {
+/**
+ * Test numbers, for staging a live site before an SMS provider exists.
+ *
+ * Twilio A2P 10DLC registration takes one to three weeks, and until it clears
+ * `issueOtp` mints a code and sends it precisely nowhere — so on a deployed
+ * site nobody can sign in and no order can be placed. That makes the whole
+ * consumer flow untestable exactly when it most needs testing.
+ *
+ * MD_OTP_TEST_NUMBERS="+15555550100:424242,+15555550101:314159" pins a fixed
+ * code to a specific phone number. This is the same mechanism Firebase Auth
+ * and Twilio Verify both ship for the same reason.
+ *
+ * What it is NOT is a bypass. The number must be listed by whoever holds the
+ * environment, the code still goes through the same hash, the same ten-minute
+ * expiry, the same five-attempt cap and the same rate limit, and nothing is
+ * returned in the response body. An attacker reading this file — and it is a
+ * public repository — learns the mechanism but not the numbers, which is the
+ * only part that matters. Use numbers in the 555 range that nobody can own.
+ */
+function testCodeFor(phone: string): string | null {
+  const raw = process.env.MD_OTP_TEST_NUMBERS;
+  if (!raw) return null;
+  for (const entry of raw.split(",")) {
+    const [num, code] = entry.split(":").map((x) => x.trim());
+    // A malformed entry is skipped rather than throwing: a typo in one pair
+    // must not take sign-in down for every real customer.
+    if (!num || !/^\d{6}$/.test(code ?? "")) continue;
+    // Normalise the configured number the same way the caller's was, so
+    // "555-555-0100" in the environment still matches "+15555550100".
+    if (normalizePhone(num) === phone) return code!;
+  }
+  return null;
+}
+
+export async function issueOtp(phone: string): Promise<OtpIssue> {
   const db = getDb();
 
   const recent = db
@@ -210,7 +245,7 @@ export function issueOtp(phone: string): OtpIssue {
     return { ok: false, error: "Too many codes requested. Wait a minute and try again." };
   }
 
-  const code = String(randomInt(0, 1_000_000)).padStart(6, "0");
+  const code = testCodeFor(phone) ?? String(randomInt(0, 1_000_000)).padStart(6, "0");
   const now = new Date();
   db.prepare(
     `INSERT INTO otp_codes (otp_id, phone_e164, code_hash, expires_at, created_at)
@@ -223,9 +258,26 @@ export function issueOtp(phone: string): OtpIssue {
     now.toISOString(),
   );
 
-  // No SMS provider is wired up. In development the code is returned so the
-  // flow is usable; in production this must go to Twilio Verify and NEVER
-  // come back in the response body.
+  // A pinned test number is fictional. Sending to it would fail at the carrier
+  // and cost money to do so, and the tester already knows the code — that is
+  // the entire point of pinning it.
+  const pinned = testCodeFor(phone) !== null;
+
+  if (!pinned && smsConfigured()) {
+    const sent = await sendSms(phone, otpMessage(code));
+    if (!sent.ok) {
+      // The row stays: it expires on its own, and deleting it here would let
+      // an attacker clear their own rate-limit history by forcing failures.
+      // Say plainly that nothing was sent, so nobody waits for a text that is
+      // never coming.
+      return { ok: false, error: "We could not send your code. Try again in a moment." };
+    }
+  }
+
+  // devCode is returned OUTSIDE PRODUCTION ONLY, and only when no SMS went
+  // out. In production it is withheld even on the pinned-number path, so the
+  // response is identical whether or not a number is pinned — otherwise this
+  // endpoint would tell anyone which numbers are test numbers.
   return process.env.NODE_ENV === "production"
     ? { ok: true }
     : { ok: true, devCode: code };

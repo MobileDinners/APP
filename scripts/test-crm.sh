@@ -2,7 +2,7 @@
 # CRM: access control, and the boundary that matters most in this product —
 # a restaurant sees its own relationship with a guest and nothing whatsoever
 # about that guest's behaviour at any other restaurant.
-B=http://localhost:3100
+B=${MD_TEST_BASE:-http://localhost:3100}
 OWNER=/tmp/md_crm_owner; BAO=/tmp/md_crm_bao; LEAD=/tmp/md_crm_lead
 rm -f $OWNER $BAO $LEAD
 mkdir -p .tmp-test

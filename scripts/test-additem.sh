@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Adding and removing menu items from the restaurant sign-in.
-B=http://localhost:3100
+B=${MD_TEST_BASE:-http://localhost:3100}
 OWNER=/tmp/md_add_owner; LEAD=/tmp/md_add_lead
 rm -f $OWNER $LEAD
 

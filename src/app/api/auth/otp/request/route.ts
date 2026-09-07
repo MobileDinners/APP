@@ -17,9 +17,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Enter a valid phone number" }, { status: 400 });
   }
 
-  const result = issueOtp(phone);
+  const result = await issueOtp(phone);
   if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: 429 });
+    // Two different failures used to share a 429. Being throttled is the
+    // caller's doing and retrying soon will work; a carrier or provider
+    // failure is ours, and a client that backs off politely on a 429 would
+    // wait for a code that is never coming. 502 says "not your fault".
+    const throttled = result.error.startsWith("Too many");
+    return NextResponse.json(
+      { error: result.error, code: throttled ? "rate_limited" : "send_failed" },
+      { status: throttled ? 429 : 502 },
+    );
   }
 
   // devCode is only ever populated outside production — see issueOtp.

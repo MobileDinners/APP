@@ -14,6 +14,7 @@ import { NextResponse, type NextRequest } from "next/server";
 /** Paths that mean the same thing on either host and must not be prefixed. */
 const SHARED_PREFIXES = [
   "/api",
+  "/admin",    // the internal admin application
   "/ops",      // the operator application
   "/kds",      // the kitchen display
   "/staff",    // staff sign-in

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Stripe Connect wiring, and the money split that decides who gets paid what.
-B=http://localhost:3100
+B=${MD_TEST_BASE:-http://localhost:3100}
 OWNER=/tmp/md_pay_owner; LEAD=/tmp/md_pay_lead
 rm -f $OWNER $LEAD
 

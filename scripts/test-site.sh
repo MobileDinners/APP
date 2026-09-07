@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Website builder: the publish gate, the claims filter behind it, and the
 # live menu binding that means there is never a second copy of the menu.
-B=http://localhost:3100
+B=${MD_TEST_BASE:-http://localhost:3100}
 OWNER=/tmp/md_site_owner; LEAD=/tmp/md_site_lead
 rm -f $OWNER $LEAD
 mkdir -p .tmp-test

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useCart } from "./CartProvider";
 import type { Session } from "@/lib/auth";
+import type { NavLink } from "@/lib/site-content";
 import { LogoLockup } from "./Logo";
 import { BagIcon } from "./icons";
 
@@ -14,17 +15,20 @@ import { BagIcon } from "./icons";
  * White ground with charcoal type and one red underline on the current page —
  * the same restraint the logo shows, where red marks one word and charcoal
  * carries the rest.
+ *
+ * The links arrive as a prop rather than a const so they can be edited at
+ * /ops/content without a deploy. The defaults still live in code — see
+ * site-content.ts — so an empty database renders the navigation that ships in
+ * the repository rather than none at all.
  */
 
-const NAV = [
-  { href: "/", label: "Home" },
-  { href: "/restaurants", label: "Restaurants" },
-  { href: "/how-it-works", label: "How It Works" },
-  { href: "/about", label: "About Us" },
-  { href: "/support", label: "Help" },
-];
-
-export function ConsumerHeader({ session }: { session: Session | null }) {
+export function ConsumerHeader({
+  session,
+  nav,
+}: {
+  session: Session | null;
+  nav: NavLink[];
+}) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { itemCount, hydrated } = useCart();
@@ -44,7 +48,7 @@ export function ConsumerHeader({ session }: { session: Session | null }) {
         </Link>
 
         <nav className="mx-auto hidden items-center gap-8 lg:flex" aria-label="Main">
-          {NAV.map((n) => {
+          {nav.map((n) => {
             const on = isActive(n.href);
             return (
               <Link
@@ -121,7 +125,7 @@ export function ConsumerHeader({ session }: { session: Session | null }) {
       {open && (
         <nav className="border-t border-line px-4 py-3 lg:hidden" aria-label="Main">
           <ul className="m-0 grid list-none gap-0.5 p-0">
-            {NAV.map((n) => (
+            {nav.map((n) => (
               <li key={n.href}>
                 <Link
                   href={n.href}

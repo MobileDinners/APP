@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { SiteContent } from "@/lib/site-content";
 import { LogoLockup } from "./Logo";
 
 /**
@@ -9,56 +10,26 @@ import { LogoLockup } from "./Logo";
  * merchant-facing thing here is "For Restaurants", which is where the whole
  * partners side hangs off — the second of its two entry points, the other being
  * the top-right of the header.
+ *
+ * The columns and the two prose lines are editable at /ops/content, so they
+ * arrive as a prop. Their defaults live in site-content.ts, in code, which is
+ * what an empty database falls back to.
  */
 
-const COLUMNS: { heading: string; links: { href: string; label: string }[] }[] = [
-  {
-    heading: "Order",
-    links: [
-      { href: "/", label: "All restaurants" },
-      { href: "/search", label: "Search" },
-      { href: "/orders", label: "Your orders" },
-      { href: "/rewards", label: "Points wallet" },
-    ],
-  },
-  {
-    heading: "Help",
-    links: [
-      { href: "/support", label: "Help centre" },
-      { href: "/support#contact", label: "Contact us" },
-      { href: "/orders", label: "Report an order problem" },
-      { href: "/signin", label: "Sign in" },
-    ],
-  },
-  {
-    heading: "Company",
-    links: [
-      { href: "/about", label: "About Mobile Dinners" },
-      { href: "/how-it-works", label: "Why no service fees" },
-      { href: "/how-it-works#points", label: "How points work" },
-      { href: "/partners", label: "For Restaurants" },
-    ],
-  },
-  {
-    heading: "Legal",
-    links: [
-      { href: "/terms", label: "Terms of Service" },
-      { href: "/privacy", label: "Privacy Policy" },
-      { href: "/privacy#rights", label: "Your data rights" },
-    ],
-  },
-];
-
-export function ConsumerFooter() {
+export function ConsumerFooter({ content }: { content: SiteContent }) {
   return (
     <footer className="mt-14 border-t border-line bg-bg-2 pb-tabs">
       <div className="mx-auto max-w-[1280px] px-4 py-10 md:px-6">
-        <div className="grid gap-8 md:grid-cols-[1.4fr_repeat(4,1fr)]">
+        {/* The column count is editable, so the track list follows it rather
+            than assuming the four this footer shipped with. */}
+        <div
+          className="grid gap-8 md:grid-cols-[1.4fr_repeat(var(--footer-cols),minmax(0,1fr))]"
+          style={{ "--footer-cols": content.footerColumns.length } as React.CSSProperties}
+        >
           <div>
             <LogoLockup markClass="h-12 w-auto" typeClass="text-[21px]" />
             <p className="mt-3 max-w-[34ch] text-[14px] leading-relaxed text-ink-2">
-              In-store prices, no service fees, and one points wallet that works at
-              every restaurant on the network.
+              {content.footerTagline}
             </p>
 
             <Link
@@ -70,7 +41,7 @@ export function ConsumerFooter() {
             </Link>
           </div>
 
-          {COLUMNS.map((col) => (
+          {content.footerColumns.map((col) => (
             <div key={col.heading}>
               <h2 className="text-[11px] font-extrabold uppercase tracking-[0.1em] text-ink-3">
                 {col.heading}
@@ -92,11 +63,10 @@ export function ConsumerFooter() {
         </div>
 
         <div className="mt-9 flex flex-col gap-2 border-t border-line pt-6 text-[13px] text-ink-3 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} Mobile Dinners, Inc.</p>
           <p>
-            Demo environment — restaurants, orders and prices here are generated
-            fixtures, and no payment is taken.
+            © {new Date().getFullYear()} {content.companyName}
           </p>
+          <p>{content.footerNote}</p>
         </div>
       </div>
     </footer>

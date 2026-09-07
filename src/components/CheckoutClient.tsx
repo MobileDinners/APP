@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { computeTotals, formatCents, pointsToCents } from "@/lib/money";
+import { CardForm, type CardFormProps } from "./CardForm";
 import type { Fulfillment, Order, Restaurant, Wallet } from "@/lib/types";
 import { useCart } from "./CartProvider";
 import { UpsellRail } from "./UpsellRail";
@@ -31,6 +32,8 @@ export function CheckoutClient({
   const [placing, setPlacing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
+  // Set once an order exists and is waiting on a card; null the rest of the time.
+  const [pay, setPay] = useState<CardFormProps | null>(null);
 
   const restaurant = restaurants.find((r) => r.orgId === cart.orgId) ?? null;
   const maxRedeemable = wallet
@@ -103,6 +106,45 @@ export function CheckoutClient({
         setPlacing(false);
         return;
       }
+      // An order that still owes a card stops here and opens the pay sheet.
+      // Only a paid order goes to tracking, and the cart is not cleared until
+      // the money moves — abandoning payment must not lose someone's basket.
+      if (data.order.state === "PENDING_PAYMENT") {
+        const intentRes = await fetch("/api/payments/intent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: data.order.orderId }),
+        });
+        const intent = (await intentRes.json()) as {
+          intentId?: string;
+          clientSecret?: string;
+          amountCents?: number;
+          publishableKey?: string;
+          error?: string;
+        };
+        if (!intentRes.ok || !intent.clientSecret) {
+          setError(intent.error ?? "Could not start the payment");
+          setPlacing(false);
+          return;
+        }
+        setPay({
+          orderId: data.order.orderId,
+          amountCents: intent.amountCents ?? data.order.totalCents,
+          clientSecret: intent.clientSecret,
+          publishableKey: intent.publishableKey!,
+          onPaid: () => {
+            clear();
+            router.push(`/track/${data.order!.orderId}`);
+          },
+          onCancel: () => {
+            setPay(null);
+            setPlacing(false);
+          },
+        });
+        setPlacing(false);
+        return;
+      }
+
       clear();
       router.push(`/track/${data.order.orderId}`);
     } catch {
@@ -380,6 +422,17 @@ export function CheckoutClient({
           </button>
         </div>
       </div>
+
+      {/* The pay sheet sits over the page rather than on a separate route, so
+          a declined card leaves the diner exactly where they were with the
+          order intact — a redirect here loses the thread at the worst moment. */}
+      {pay && (
+        <div className="fixed inset-0 z-50 grid place-items-end bg-ink/40 p-0 sm:place-items-center sm:p-4">
+          <div className="w-full max-w-[440px]">
+            <CardForm {...pay} />
+          </div>
+        </div>
+      )}
 
       {verifying && (
         <VerifySheet

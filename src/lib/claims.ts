@@ -127,6 +127,25 @@ const RULES: Rule[] = [
     category: "guarantee",
     reason: "A guarantee on a public page can be enforceable. Make sure it is one you will honour.",
   },
+  {
+    // Delivery is quoted per order from the courier network and varies with
+    // distance, so a blanket promise on a standing page is one this platform
+    // cannot keep. It is a warning rather than a block because a genuine,
+    // funded promotion is a legitimate thing to run — it just has to be a
+    // decision somebody made, not a phrase that drifted into the footer.
+    pattern: /\b(free|no|zero|\$0)[\s-]?(delivery|deliveries|delivery fees?|shipping)\b/gi,
+    severity: "warn",
+    category: "guarantee",
+    reason:
+      "Delivery is priced per order by distance, so this promises something the platform does not control. Only publish it if a funded promotion is actually running.",
+  },
+  {
+    pattern: /\b(always|never) (late|arrives?|on[\s-]?time)\b|\b(guaranteed|always) (in|within|under) \d+ min\w*\b/gi,
+    severity: "warn",
+    category: "guarantee",
+    reason:
+      "A delivery-time promise depends on the kitchen and the courier, neither of which this page can commit on behalf of.",
+  },
 ];
 
 /** Scans one field. Returns every finding, deduplicated by matched text. */

@@ -9,6 +9,7 @@ import { ConsumerFooter } from "./ConsumerFooter";
 import { ConsumerHeader } from "./ConsumerHeader";
 import { LogoLockup } from "./Logo";
 import type { Session } from "@/lib/auth";
+import type { SiteContent } from "@/lib/site-content";
 import { formatCents } from "@/lib/money";
 import {
   BagIcon, ChevronIcon, GiftIcon, HomeIcon, PinIcon, ReceiptIcon, SearchIcon,
@@ -40,6 +41,15 @@ function isStaffTool(pathname: string): boolean {
 }
 
 /**
+ * The internal admin application brings its own header and navigation, so it
+ * takes no chrome from here at all — not the consumer shell, and not the
+ * operator bar either, since /admin is not scoped to one restaurant.
+ */
+function isAdmin(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
+}
+
+/**
  * Legal pages are shared by both audiences, so they take whichever chrome the
  * reader arrived in. Defaulting them to the consumer shell is the right guess:
  * far more diners than owners read a privacy policy.
@@ -60,12 +70,17 @@ const SHARED_ROUTES = new Set(["/terms", "/privacy"]);
 export function AppChrome({
   children,
   session,
+  content,
 }: {
   children: React.ReactNode;
   session: Session | null;
+  /** Editable header and footer copy, resolved server-side in the layout. */
+  content: SiteContent;
 }) {
   const pathname = usePathname();
   const isStaff = isStaffTool(pathname);
+
+  if (isAdmin(pathname)) return <>{children}</>;
 
   if (isPartners(pathname)) {
     return <PartnersChrome>{children}</PartnersChrome>;
@@ -85,9 +100,9 @@ export function AppChrome({
 
   return (
     <>
-      {!hideTopBar && <ConsumerHeader session={session} />}
+      {!hideTopBar && <ConsumerHeader session={session} nav={content.headerNav} />}
       {children}
-      <ConsumerFooter />
+      <ConsumerFooter content={content} />
       <BottomTabs pathname={pathname} />
       <SurfaceSwitcher pathname={pathname} />
     </>

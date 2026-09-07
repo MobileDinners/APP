@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { CartProvider } from "@/components/CartProvider";
 import { AppChrome } from "@/components/AppChrome";
 import { getSession } from "@/lib/auth";
+import { getSiteContent } from "@/lib/site-content";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,6 +24,9 @@ export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await getSession();
+  // Header and footer copy is editable at /ops/content; read once per request
+  // here rather than in both components.
+  const content = getSiteContent();
 
   return (
     <html lang="en">
@@ -37,7 +41,9 @@ export default async function RootLayout({
       </head>
       <body>
         <CartProvider>
-          <AppChrome session={session}>{children}</AppChrome>
+          <AppChrome session={session} content={content}>
+            {children}
+          </AppChrome>
         </CartProvider>
       </body>
     </html>

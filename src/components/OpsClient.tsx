@@ -28,12 +28,15 @@ function nextState(state: OrderState, fulfillment: string): OrderState | null {
 export function OpsClient({
   active,
   staff,
+  isPlatformAdmin = false,
   orders,
   menu,
   stats,
 }: {
   active: Restaurant;
   staff: { name: string; role: string };
+  /** Platform staff only: edits the marketplace header and footer. */
+  isPlatformAdmin?: boolean;
   orders: Order[];
   menu: MenuItem[];
   stats: {
@@ -152,6 +155,17 @@ export function OpsClient({
           >
             Menu
           </Link>
+          {/* Not a restaurant tool — this edits the marketplace chrome every
+              restaurant's customers see, so only platform staff get the link
+              and only they can open the page. */}
+          {isPlatformAdmin && (
+            <Link
+              href="/ops/content"
+              className="mono rounded-sm border border-brand px-2.5 py-1 text-[11px] uppercase tracking-[0.08em] text-brand-strong hover:bg-brand-soft"
+            >
+              Site content
+            </Link>
+          )}
           <LiveDot connected={connected} />
           <SignOut name={staff.name} />
         </div>

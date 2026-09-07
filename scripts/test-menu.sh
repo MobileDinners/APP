@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Menu draft/publish/versioning checks against the running dev server.
-B=http://localhost:3100
+B=${MD_TEST_BASE:-http://localhost:3100}
 OWNER=/tmp/md_owner; LEAD=/tmp/md_lead2; CUST=/tmp/md_cust
 rm -f $OWNER $LEAD $CUST
 

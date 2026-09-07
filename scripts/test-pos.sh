@@ -5,7 +5,7 @@
 # Square and Clover cannot be exercised without merchant credentials, so the
 # sandbox provider stands in for a real till. The mapping, conflict and order
 # injection logic under test is the same code path all three providers use.
-B=http://localhost:3100
+B=${MD_TEST_BASE:-http://localhost:3100}
 OWNER=/tmp/md_pos_owner; LEAD=/tmp/md_pos_lead; CUST=/tmp/md_pos_cust
 rm -f $OWNER $LEAD $CUST
 mkdir -p .tmp-test

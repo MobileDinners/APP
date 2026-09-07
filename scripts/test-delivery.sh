@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # DoorDash Drive dispatch: booking a courier, tracking one, and the money.
-B=http://localhost:3100
+B=${MD_TEST_BASE:-http://localhost:3100}
 OWNER=/tmp/md_dlv_owner; LEAD=/tmp/md_dlv_lead; CUST=/tmp/md_dlv_cust
 rm -f $OWNER $LEAD $CUST
 

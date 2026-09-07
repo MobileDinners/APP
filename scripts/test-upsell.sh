@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Upsell engine: the hard filters that stop it suggesting something harmful,
 # and the telemetry that makes "upsells raised the ticket" a checkable claim.
-B=http://localhost:3100
+B=${MD_TEST_BASE:-http://localhost:3100}
 OWNER=/tmp/md_up_owner; CUST=/tmp/md_up_cust
 rm -f $OWNER $CUST
 mkdir -p .tmp-test

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The three surfaces: the consumer marketplace at the root, the partners site
 # on its own host, and the staff tools behind them. Plus restaurant signup.
-B=http://localhost:3100
+B=${MD_TEST_BASE:-http://localhost:3100}
 JAR=/tmp/md_signup_jar
 rm -f $JAR
 
