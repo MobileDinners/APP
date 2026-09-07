@@ -262,6 +262,10 @@ function migrate(db: DatabaseSync): void {
   ensureColumn(db, "orgs", "charges_enabled", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "orgs", "payouts_enabled", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "orgs", "payments_updated_at", "TEXT");
+  // Geocoded once from the address the owner typed at signup, so every diner's
+  // distance is measured from a fixed point rather than re-geocoded per order.
+  ensureColumn(db, "orgs", "lat", "REAL");
+  ensureColumn(db, "orgs", "lng", "REAL");
 
 ensureColumn(db, "persons", "marketing_sms", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "persons", "marketing_email", "INTEGER NOT NULL DEFAULT 0");
@@ -518,6 +522,21 @@ ensureColumn(db, "persons", "marketing_sms", "INTEGER NOT NULL DEFAULT 0");
       value      TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       updated_by TEXT NOT NULL
+    );
+
+    -- Geocoded addresses, cached permanently.
+    --
+    -- OpenCage's free tier is 2,500 lookups a day and a busy service would
+    -- burn that on one street of regulars. Addresses do not move, so there is
+    -- no expiry: the only reason to evict is a provider correcting a bad
+    -- result, which is rare enough to do by hand.
+    CREATE TABLE IF NOT EXISTS geocode_cache (
+      key        TEXT PRIMARY KEY,
+      lat        REAL NOT NULL,
+      lng        REAL NOT NULL,
+      confidence INTEGER NOT NULL DEFAULT 0,
+      formatted  TEXT NOT NULL,
+      created_at TEXT NOT NULL
     );
 
     -- Editable copy for the platform's own site: header nav, footer, taglines.

@@ -72,6 +72,7 @@ type OrgRow = {
   price_band: string; rating: number; rating_count: number; blurb: string;
   hero_hue: number; image_kw: string; promo: string | null; is_sponsored: number;
   distance_mi: number; address: string; prep_base_seconds: number;
+  lat: number | null; lng: number | null;
   accepting_orders: number; delivery_fee_cents: number; points_multiplier: number;
 };
 
@@ -82,6 +83,7 @@ function toRestaurant(r: OrgRow): Restaurant {
     blurb: r.blurb, heroHue: r.hero_hue, imageKw: r.image_kw, promo: r.promo,
     isSponsored: r.is_sponsored === 1,
     distanceMi: r.distance_mi, address: r.address, prepBaseSeconds: r.prep_base_seconds,
+    lat: r.lat ?? null, lng: r.lng ?? null,
     acceptingOrders: r.accepting_orders === 1, deliveryFeeCents: r.delivery_fee_cents,
     pointsMultiplier: r.points_multiplier,
   };
@@ -205,6 +207,18 @@ export type IncomingLine = {
 };
 
 export type CreateOrderInput = {
+  /**
+   * The delivery fee this order was quoted, in cents.
+   *
+   * Passed in rather than computed here because working it out needs a
+   * geocoding call and createOrder is synchronous — it runs inside the same
+   * transaction as the order rows, and an HTTP request has no business in
+   * there. The route quotes first, then creates.
+   *
+   * Omitted for pickup, and falls back to the restaurant's flat rate when no
+   * quote could be made.
+   */
+  quotedDeliveryFeeCents?: number;
   orgId: string;
   personId: string;
   fulfillment: Fulfillment;
@@ -320,7 +334,10 @@ export function createOrder(input: CreateOrderInput): Order {
   const totals = computeTotals({
     subtotalCents,
     fulfillment: input.fulfillment,
-    deliveryFeeCents: org.deliveryFeeCents,
+    // A real quote if the route made one; the flat rate otherwise. Never
+    // recomputed here, so the diner is charged exactly what they were shown.
+    deliveryFeeCents:
+      input.quotedDeliveryFeeCents ?? org.deliveryFeeCents,
     tipCents,
     pointsToRedeem,
     tierMultiplier: org.pointsMultiplier,

@@ -3,6 +3,8 @@ import { createOrder, listOrders, OrderError } from "@/lib/orders";
 import { getSession } from "@/lib/auth";
 import { LIMITS, rateLimit } from "@/lib/ratelimit";
 import { pushOrderToPos } from "@/lib/pos/sync";
+import { deliveryQuote } from "@/lib/geocode";
+import { getRestaurantById } from "@/lib/orders";
 import type { Fulfillment } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -66,17 +68,55 @@ export async function POST(req: Request) {
     );
   }
 
+  const fulfillment = (body.fulfillment as Fulfillment) ?? "pickup";
+  const address = String(body.address ?? "742 Elm St, Apt 4B");
+
+  /**
+   * Quote the delivery fee from the real distance before the order exists.
+   *
+   * This is the promise on /how-it-works and the partner pricing page — a fee
+   * "worked out from how far your address is from the restaurant". It has to
+   * happen out here because it makes a network call, and createOrder runs in a
+   * transaction where an HTTP request does not belong.
+   *
+   * Out of range refuses the order rather than quietly charging the cap. The
+   * published maximum is a promise about a short trip, not about any trip.
+   */
+  let quotedDeliveryFeeCents: number | undefined;
+  if (fulfillment === "delivery") {
+    const org = getRestaurantById(String(body.orgId ?? ""));
+    if (org) {
+      const quote = await deliveryQuote({
+        restaurant: {
+          lat: org.lat,
+          lng: org.lng,
+          address: org.address,
+          deliveryFeeCents: org.deliveryFeeCents,
+        },
+        address,
+      });
+      if (quote.outOfRange) {
+        return NextResponse.json(
+          { error: quote.reason, code: "out_of_range" },
+          { status: 422 },
+        );
+      }
+      quotedDeliveryFeeCents = quote.feeCents;
+    }
+  }
+
   try {
     const order = createOrder({
+      quotedDeliveryFeeCents,
       orgId: String(body.orgId ?? ""),
       personId: session.personId,
-      fulfillment: (body.fulfillment as Fulfillment) ?? "pickup",
+      fulfillment,
       lines: Array.isArray(body.lines) ? (body.lines as never[]) : [],
       tipCents: Number(body.tipCents ?? 0),
       pointsToRedeem: Number(body.pointsToRedeem ?? 0),
       guestName: session.displayName || "Guest",
       guestPhone: session.phone ?? "",
-      address: String(body.address ?? "742 Elm St, Apt 4B"),
+      address,
       idempotencyKey,
     });
     // If the restaurant runs its own till, the ticket belongs there too. This

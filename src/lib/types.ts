@@ -48,6 +48,9 @@ export type Restaurant = {
   distanceMi: number;
   prepBaseSeconds: number;
   acceptingOrders: boolean;
+  /** Geocoded location. Null until the address has been resolved. */
+  lat: number | null;
+  lng: number | null;
   deliveryFeeCents: number;
   pointsMultiplier: number;
   address: string;
