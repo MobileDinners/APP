@@ -167,6 +167,17 @@ export async function getSession(): Promise<Session | null> {
   };
 }
 
+/**
+ * A customer session, for a person who has just proved who they are by some
+ * means other than a one-time code — today, an email and a password.
+ *
+ * Narrow on purpose: it only ever mints a `person` session and takes no org,
+ * so it cannot accidentally be used to hand out staff access.
+ */
+export function createSessionFor(personId: string, ttlMs: number): string {
+  return createSession("person", personId, null, ttlMs);
+}
+
 export async function requireStaff(): Promise<Extract<Session, { kind: "staff" }>> {
   const session = await getSession();
   if (session?.kind !== "staff") throw new AuthError("Staff sign-in required", 401);

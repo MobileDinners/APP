@@ -55,6 +55,7 @@ export const DEFAULT_CONTENT: SiteContent = {
         { href: "/restaurants", label: "All restaurants" },
         { href: "/search", label: "Search" },
         { href: "/orders", label: "Your orders" },
+        { href: "/account", label: "Your account" },
         { href: "/rewards", label: "Points wallet" },
       ],
     },

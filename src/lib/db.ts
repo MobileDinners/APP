@@ -267,6 +267,10 @@ function migrate(db: DatabaseSync): void {
   ensureColumn(db, "orgs", "lat", "REAL");
   ensureColumn(db, "orgs", "lng", "REAL");
 
+  // Customers can hold a password as well as a phone. Nullable, because the
+  // phone-and-code path predates it and those accounts have none — a person
+  // may have either credential, or both.
+  ensureColumn(db, "persons", "password_hash", "TEXT");
 ensureColumn(db, "persons", "marketing_sms", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "persons", "marketing_email", "INTEGER NOT NULL DEFAULT 0");
   ensureColumn(db, "persons", "consent_at", "TEXT");

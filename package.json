@@ -24,6 +24,7 @@
     "test:additem": "bash scripts/test-additem.sh",
     "test:content": "bash scripts/test-content.sh",
     "test:admin": "bash scripts/test-admin.sh",
+    "test:customer": "bash scripts/test-customer.sh",
     "seed:billing": "node scripts/seed-billing.cjs"
   },
   "dependencies": {

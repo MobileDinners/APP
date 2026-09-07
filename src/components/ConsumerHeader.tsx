@@ -71,7 +71,7 @@ export function ConsumerHeader({
         <div className="ml-auto flex shrink-0 items-center gap-2.5 lg:ml-0">
           {session?.kind === "person" ? (
             <Link
-              href="/rewards"
+              href="/account"
               className="hidden rounded-[10px] border border-line-2 px-4 py-2.5 text-[14.5px] font-bold hover:bg-card-2 sm:block"
             >
               {session.displayName || "Account"}
