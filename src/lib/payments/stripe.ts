@@ -369,11 +369,26 @@ export const stripeProvider: PaymentProvider = {
         body: form({
           payment_intent: intentId,
           amount: amountCents ?? undefined,
-          // Refunding the application fee too means a refunded order costs the
-          // restaurant nothing, which is the only defensible behaviour.
-          refund_application_fee: "true",
-          reverse_transfer: "true",
+          /**
+           * The PLATFORM absorbs the refund. The restaurant keeps its money.
+           *
+           * This used to send reverse_transfer: true, under a comment claiming
+           * it cost the restaurant nothing. It cost them everything: reversing
+           * the transfer takes their entire share back out of their connected
+           * account, often days after they cooked and handed over the food.
+           *
+           * A restaurant that loses the ingredients, the labour and the money
+           * because a diner complained has been made to underwrite our
+           * customer service, and would be right to leave. So the transfer is
+           * not reversed and the application fee is not refunded — the refund
+           * comes out of the platform balance.
+           *
+           * That is a real cost and it scales with order volume. It is also
+           * the reason to care about refund abuse, and the reason the ledger
+           * records who authorised each one.
+           */
           "metadata[reason]": reason,
+          "metadata[absorbed_by]": "platform",
         }),
       },
     );
@@ -394,10 +409,12 @@ export const stripeProvider: PaymentProvider = {
     if (!secret || !signature) return null;
     if (!verifySignature(rawBody, signature, secret)) return null;
 
+    // The object is a PaymentIntent for payment_intent.* and a Charge for
+    // charge.refunded, so the shape is the union of what we read from either.
     let evt: {
       id: string;
       type: string;
-      data?: { object?: StripeIntent };
+      data?: { object?: StripeIntent & { amount_refunded?: number } };
     };
     try {
       evt = JSON.parse(rawBody);
@@ -412,6 +429,10 @@ export const stripeProvider: PaymentProvider = {
       intentId: obj?.id ?? null,
       orderId: obj?.metadata?.order_id ?? null,
       amountCents: typeof obj?.amount === "number" ? obj.amount : null,
+      // charge.refunded carries the charge, so `amount` is the ORIGINAL total,
+      // not what came back. amount_refunded is the cumulative refund.
+      amountRefundedCents:
+        typeof obj?.amount_refunded === "number" ? obj.amount_refunded : null,
       status: obj?.status ? toStatus(obj.status) : null,
     };
   },

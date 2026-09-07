@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { markOrderPaid } from "@/lib/payments/checkout";
 import { getPaymentProvider, paymentsConfigured } from "@/lib/payments";
-import { addRefund, claimEvent, getPaymentByIntent, orgIdForAccount, saveConnectStatus, setPaymentStatus } from "@/lib/payments/store";
+import { claimEvent, getPaymentByIntent, orgIdForAccount, saveConnectStatus, setPaymentStatus, setRefundedTotal } from "@/lib/payments/store";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -63,8 +63,12 @@ export async function POST(req: Request) {
         break;
 
       case "charge.refunded":
-        if (event.intentId && event.amountCents !== null) {
-          addRefund(event.intentId, event.amountCents);
+        // amount_refunded is Stripe's CUMULATIVE total for the charge, so
+        // setting it is idempotent. The old code added `amount` — the original
+        // charge total — so a $5 refund on a $10 order recorded $10 refunded,
+        // and a redelivered webhook recorded it again.
+        if (event.intentId && event.amountRefundedCents !== null) {
+          setRefundedTotal(event.intentId, event.amountRefundedCents);
         }
         break;
 

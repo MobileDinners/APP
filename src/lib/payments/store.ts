@@ -111,6 +111,23 @@ export function setPaymentStatus(
   return getPaymentByIntent(intentId);
 }
 
+/**
+ * Sets the refunded total outright, rather than adding to it.
+ *
+ * This is what the webhook uses. Stripe reports the CUMULATIVE amount
+ * refunded on a charge, and webhooks arrive more than once by design — an
+ * increment would double-count every retry, and our own refund call plus the
+ * webhook it triggers would double-count every refund. Setting an
+ * authoritative total is idempotent whatever order things land in.
+ */
+export function setRefundedTotal(intentId: string, totalCents: number): void {
+  getDb()
+    .prepare(
+      "UPDATE payments SET refunded_cents = ?, updated_at = ? WHERE intent_id = ?",
+    )
+    .run(totalCents, new Date().toISOString(), intentId);
+}
+
 export function addRefund(intentId: string, amountCents: number): void {
   getDb()
     .prepare(

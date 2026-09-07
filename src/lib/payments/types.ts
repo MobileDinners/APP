@@ -75,6 +75,13 @@ export type ProcessorEvent = {
   intentId: string | null;
   orderId: string | null;
   amountCents: number | null;
+  /**
+   * For charge.refunded: the CUMULATIVE amount refunded on that charge, which
+   * is what Stripe reports and the only figure safe to act on. The per-refund
+   * amount is not enough — a webhook can arrive twice, or out of order, and
+   * adding a delta each time double-counts.
+   */
+  amountRefundedCents: number | null;
   status: PaymentStatus | null;
 };
 

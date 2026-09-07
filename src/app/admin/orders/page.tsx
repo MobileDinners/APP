@@ -164,8 +164,7 @@ export default async function OrdersPage({
                 <tr key={o.orderId} className="hover:bg-card-2">
                   <Td mono>
                     <Link
-                      href={`/track/${o.orderId}`}
-                      target="_blank"
+                      href={`/admin/orders/${o.orderId}`}
                       className="font-bold hover:text-brand-strong hover:underline"
                     >
                       {o.orderId.slice(-8)}
