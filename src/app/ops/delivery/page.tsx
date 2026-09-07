@@ -49,6 +49,15 @@ export default async function DeliveryOpsPage() {
           <code className="mono">.env.local</code> to book real Dashers.
         </p>
       )}
+      {mode === "unlabelled" && (
+        <p className="mt-5 rounded-[12px] bg-amber-soft px-4 py-3 text-[14px] font-semibold text-amber">
+          DoorDash credentials are set and requests go to their <strong>production</strong>
+          {" "}endpoint, but nothing says whether these are sandbox or live credentials.
+          Marking a delivery order ready may dispatch a real Dasher to a real address.
+          Set <code className="mono">DOORDASH_ENV</code> to <code className="mono">sandbox</code>
+          {" "}or <code className="mono">live</code> once you know which you hold.
+        </p>
+      )}
       {mode === "sandbox" && (
         <p className="mt-5 rounded-[12px] bg-blue-soft px-4 py-3 text-[14px] font-semibold text-blue">
           DoorDash is in <strong>sandbox</strong>. Deliveries are simulated on

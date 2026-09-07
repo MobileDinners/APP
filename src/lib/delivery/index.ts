@@ -36,10 +36,41 @@ export function getDeliveryProvider(): DeliveryProvider {
 }
 
 /** Which environment the credentials point at, for the ops dashboard. */
-export function deliveryMode(): "live" | "sandbox" | "none" {
+/**
+ * Which courier world we are in — and how much that answer can be trusted.
+ *
+ * DOORDASH_ENV is a LABEL. It does not change where requests go: that is
+ * DOORDASH_API_BASE, which defaults to DoorDash's production endpoint. So a
+ * deployment with production credentials and DOORDASH_ENV=sandbox would show
+ * a reassuring blue "simulated" banner while dispatching real Dashers to real
+ * addresses. A label that can lie about whether a driver is really coming is
+ * worse than no label.
+ *
+ * Hence "unlabelled": configured, pointed at production, and nobody has said
+ * which credentials these are. The operator sees that as a warning rather than
+ * a confident "live", because the honest answer is that we do not know.
+ */
+export type DeliveryMode = "live" | "sandbox" | "unlabelled" | "none";
+
+export function deliveryMode(): DeliveryMode {
   if (!deliveryConfigured()) return "none";
-  return (process.env.DOORDASH_API_BASE ?? "").includes("sandbox") ||
-    process.env.DOORDASH_ENV === "sandbox"
-    ? "sandbox"
-    : "live";
+
+  const base = process.env.DOORDASH_API_BASE ?? "";
+  // A sandbox endpoint is the only self-evident answer; everything else is a
+  // claim somebody made in an environment variable.
+  if (base.includes("sandbox")) return "sandbox";
+
+  const label = process.env.DOORDASH_ENV;
+  if (label === "sandbox") {
+    // Believed, but not silently: the requests are still going to production.
+    console.warn(
+      "[delivery] DOORDASH_ENV=sandbox but DOORDASH_API_BASE points at " +
+        "production. The label is cosmetic — verify these are sandbox " +
+        "credentials before marking a delivery order ready.",
+    );
+    return "sandbox";
+  }
+  if (label === "live") return "live";
+
+  return "unlabelled";
 }
