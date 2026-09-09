@@ -134,16 +134,25 @@ export default function MarketplacePage() {
         </div>
       </Wrap>
 
-      {/* ------------------------------------------------------------ live proof */}
+      {/* ------------------------------------------------------------ live proof
+        A section called "live proof" proves nothing when the network is empty —
+        it renders a headline promising restaurants above four zeroes. It hides
+        itself until there is something to show, and returns the moment a
+        restaurant publishes.
+      */}
+      {live.length > 0 && (
       <section className="bg-bg-2 py-14 md:py-20">
         <Wrap>
           <SectionHead
             eyebrow="On the network"
             title="Restaurants taking orders right now"
-            lede="These are live listings on this build, with real published menus behind them."
+            lede="Live listings with published menus behind them."
           />
 
-          <dl className="mt-8 grid grid-cols-2 gap-6 md:grid-cols-4">
+          {/* "Commission taken 0%" lived here. It is a fact about what a
+              restaurant pays us, on a page a diner reads to work out what THEY
+              pay, so it moved off the customer site entirely. */}
+          <dl className="mt-8 grid grid-cols-3 gap-6">
             <div>
               <dt className="sr-only">Restaurants</dt>
               <dd>
@@ -154,12 +163,6 @@ export default function MarketplacePage() {
               <dt className="sr-only">Cuisines</dt>
               <dd>
                 <Stat value={cuisines.length.toLocaleString()} label="Cuisines" />
-              </dd>
-            </div>
-            <div>
-              <dt className="sr-only">Commission</dt>
-              <dd>
-                <Stat value="0%" label="Commission taken" />
               </dd>
             </div>
             <div>
@@ -194,7 +197,7 @@ export default function MarketplacePage() {
                       <span className="num">{menu.length}</span> dishes
                     </p>
                     <p className="mt-2 text-[13px] font-bold text-green">
-                      No service fee · 0% commission
+                      No service fee · in-store prices
                     </p>
                   </div>
                 </Link>
@@ -210,6 +213,7 @@ export default function MarketplacePage() {
           </Link>
         </Wrap>
       </section>
+      )}
 
       {/* --------------------------------------------------------------- wallet */}
       <Wrap id="points" className="scroll-mt-24 py-14 md:py-20">

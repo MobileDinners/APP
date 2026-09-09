@@ -97,20 +97,23 @@ export default function ConsumerAboutPage() {
           <dt className="sr-only">Service fee</dt>
           <dd><Stat value="$0" label="Service fee" note="On every order" /></dd>
         </div>
-        <div>
-          <dt className="sr-only">Commission</dt>
-          <dd><Stat value="0%" label="Taken from restaurants" note="Written into the contract" /></dd>
-        </div>
-        <div>
-          <dt className="sr-only">Restaurants</dt>
-          <dd>
-            <Stat
-              value={live.length.toLocaleString()}
-              label="Restaurants live"
-              note="Taking orders right now"
-            />
-          </dd>
-        </div>
+        {/*
+          A "0% taken from restaurants" tile used to sit here. It is true, and
+          it answers a question a diner never asked — what we charge a kitchen
+          belongs on the partner site, next to the pricing it explains.
+        */}
+        {live.length > 0 && (
+          <div>
+            <dt className="sr-only">Restaurants</dt>
+            <dd>
+              <Stat
+                value={live.length.toLocaleString()}
+                label="Restaurants live"
+                note="Taking orders right now"
+              />
+            </dd>
+          </div>
+        )}
         <div>
           <dt className="sr-only">Points</dt>
           <dd><Stat value="1" label="Points wallet" note="Works at all of them" /></dd>
@@ -180,11 +183,12 @@ export default function ConsumerAboutPage() {
         </Link>
       </section>
 
-      <p className="mt-8 text-[13px] leading-relaxed text-ink-3">
-        This build is a demonstration environment. The restaurants, orders and
-        figures shown across the app are generated fixtures, and no payment is
-        taken at checkout.
-      </p>
+      {/*
+        "This build is a demonstration environment. The restaurants, orders and
+        figures shown across the app are generated fixtures" closed this page.
+        On an About page — the one a customer opens to decide whether we are a
+        real company — that sentence answers the question with "no".
+      */}
     </main>
   );
 }

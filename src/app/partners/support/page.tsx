@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { CtaBand, Card, Faq, PageHero, SectionHead, Wrap } from "@/components/marketing";
+import { SUPPORT_PHONE } from "@/lib/platform";
 
 export const metadata: Metadata = {
   title: "Support — Mobile Dinners",
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 const CHANNELS = [
   {
     name: "Kitchen down",
-    detail: "(415) 555-0111",
+    detail: SUPPORT_PHONE,
     blurb:
       "Orders not printing, terminal offline, cannot take payment. Answered by a human, 24/7, no queue and no tier gating. Use this one when service is at risk.",
     tone: "urgent" as const,
@@ -233,7 +234,7 @@ export default function SupportPage() {
 
       <CtaBand
         title="Still stuck? Call the line."
-        lede="(415) 555-0111 is answered by a person, at any hour, on every plan. If it is not urgent, chat and email are in the dashboard."
+        lede={`${SUPPORT_PHONE} is answered by a person, at any hour, on every plan. If it is not urgent, chat and email are in the dashboard.`}
         primary={{ href: "/partners/signup", label: "Start free" }}
         secondary={{ href: "/partners/features", label: "Read the features" }}
       />

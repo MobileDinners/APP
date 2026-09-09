@@ -86,8 +86,12 @@ export const DEFAULT_CONTENT: SiteContent = {
       ],
     },
   ],
-  footerNote:
-    "Demo environment — restaurants, orders and prices here are generated fixtures, and no payment is taken.",
+  // Empty by design. This used to read "Demo environment — restaurants, orders
+  // and prices here are generated fixtures, and no payment is taken", which sat
+  // on every page of the customer site telling anyone who read it that none of
+  // this was real. Editable from the admin content editor if there is ever
+  // something worth saying here.
+  footerNote: "",
   companyName: "Mobile Dinners, Inc.",
 };
 
@@ -193,10 +197,21 @@ function assertInternalHref(href: string, where: string): void {
   }
 }
 
-function cleanText(value: unknown, where: string, max: number): string {
+function cleanText(
+  value: unknown,
+  where: string,
+  max: number,
+  /**
+   * Only the footer note. Every other field is structural — an empty nav label
+   * or company name is a broken page — but the footer note is a remark, and
+   * "no remark" has to be an option a person can actually choose. Without this
+   * the only way to stop saying something is to say something else.
+   */
+  allowEmpty = false,
+): string {
   if (typeof value !== "string") throw new ContentError(`${where} must be text.`);
   const text = value.trim();
-  if (!text) throw new ContentError(`${where} cannot be empty.`);
+  if (!text && !allowEmpty) throw new ContentError(`${where} cannot be empty.`);
   if (text.length > max) {
     throw new ContentError(`${where} is ${text.length} characters; the limit is ${max}.`);
   }
@@ -252,7 +267,7 @@ export function validateContent(raw: unknown): SiteContent {
     headerNav,
     footerColumns,
     footerTagline: cleanText(r.footerTagline, "Footer tagline", LIMITS.text),
-    footerNote: cleanText(r.footerNote, "Footer note", LIMITS.text),
+    footerNote: cleanText(r.footerNote, "Footer note", LIMITS.text, true),
     companyName: cleanText(r.companyName, "Company name", 80),
   };
 }

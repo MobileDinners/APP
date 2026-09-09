@@ -66,7 +66,7 @@ export function ConsumerFooter({ content }: { content: SiteContent }) {
           <p>
             © {new Date().getFullYear()} {content.companyName}
           </p>
-          <p>{content.footerNote}</p>
+          {content.footerNote && <p>{content.footerNote}</p>}
         </div>
       </div>
     </footer>

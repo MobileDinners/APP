@@ -1,4 +1,5 @@
 import { getRestaurantById, getOrder, transition } from "../orders";
+import { SUPPORT_PHONE_TEL } from "../platform";
 import { getDeliveryProvider } from "./index";
 import {
   getDeliveryForOrder,
@@ -41,8 +42,13 @@ function quoteInputFor(orderId: string): QuoteInput {
     pickup: {
       street: restaurant.address,
       businessName: restaurant.brandName,
-      // The courier calls the restaurant, not us, when they are outside.
-      phone: process.env.MD_SUPPORT_PHONE ?? "+14155550111",
+      // The comment here used to claim the courier calls the restaurant. It
+      // does not and cannot: orgs has no phone column, so there is no
+      // restaurant number to give. A courier stuck at the counter reaches
+      // Mobile Dinners support, and the fallback used to be a made-up
+      // 415-555 number — which, once DoorDash is approved for production,
+      // is a dead line at exactly the moment somebody needs it.
+      phone: process.env.MD_SUPPORT_PHONE ?? SUPPORT_PHONE_TEL,
       instructions: "Collect the Mobile Dinners order at the counter.",
       contactName: restaurant.brandName,
     },

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Faq, SectionHead } from "@/components/marketing";
+import { SUPPORT_PHONE, SUPPORT_PHONE_TEL } from "@/lib/platform";
 
 export const metadata: Metadata = {
   title: "Help — Mobile Dinners",
@@ -70,7 +71,14 @@ const FAQS = [
   },
 ];
 
-const CONTACT = [
+const CONTACT: {
+  name: string;
+  detail: string;
+  /** Set when the detail is something a device can act on — dial, or compose. */
+  href?: string;
+  blurb: string;
+  tone: "primary" | "normal";
+}[] = [
   {
     name: "Live chat",
     detail: "In the app, from any order",
@@ -80,12 +88,16 @@ const CONTACT = [
   {
     name: "Email",
     detail: "help@mobiledinners.com",
+    href: "mailto:help@mobiledinners.com",
     blurb: "Account questions, refunds that need a second look, anything with a photo attached. We reply within a day.",
     tone: "normal" as const,
   },
   {
     name: "Phone",
-    detail: "(415) 555-0199",
+    detail: SUPPORT_PHONE,
+    // A number a thumb cannot dial is a number that does not get called, and
+    // most of this traffic is a phone held one-handed outside a restaurant.
+    href: `tel:${SUPPORT_PHONE_TEL}`,
     blurb: "9am–11pm, every day. Use this if an order has gone badly wrong and you would rather talk to someone.",
     tone: "normal" as const,
   },
@@ -145,7 +157,15 @@ export default function ConsumerSupportPage() {
               }`}
             >
               <h3 className="text-[16px] font-extrabold">{c.name}</h3>
-              <p className="num mt-1 text-[13.5px] font-bold text-brand-strong">{c.detail}</p>
+              <p className="num mt-1 text-[13.5px] font-bold text-brand-strong">
+                {c.href ? (
+                  <a href={c.href} className="hover:underline">
+                    {c.detail}
+                  </a>
+                ) : (
+                  c.detail
+                )}
+              </p>
               <p className="mt-2 text-[13.5px] leading-relaxed text-ink-2">{c.blurb}</p>
             </div>
           ))}
@@ -166,10 +186,14 @@ export default function ConsumerSupportPage() {
         </Link>
       </section>
 
+      {/*
+        This used to end "...and the phone numbers and email addresses above are
+        placeholders". The number above is now a real line, and a page that tells
+        a customer the number is fake is a page that stops them calling it.
+      */}
       <p className="mt-8 text-[13px] leading-relaxed text-ink-3">
-        This build is a demonstration environment. Orders placed here are real
-        records in the system but no payment is taken, and the phone numbers and
-        email addresses above are placeholders.
+        Orders placed here are real records in the system, but card payments are
+        still running against a test processor, so no money moves yet.
       </p>
     </main>
   );

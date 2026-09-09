@@ -183,19 +183,18 @@ export default async function RestaurantsPage({
       {/* The pitch, stated once, where a guest actually reads it */}
       <section className="border-t border-line px-4 py-9 md:px-6">
         <h2 className="text-[19px] font-extrabold">
-          0% commission. The kitchen keeps the whole ticket.
+          The price you see is the price on the wall.
         </h2>
         <p className="mt-1.5 max-w-[68ch] text-[14.5px] leading-relaxed text-ink-2">
-          Other apps take 15–30% of every order, so restaurants raise their prices
-          there to survive it. We charge a flat monthly fee instead — menu prices
-          here match the ones printed inside, there is no service fee, and your
-          points work across every restaurant on this page.
+          Menu prices here match the ones printed inside the restaurant, there is
+          no service fee, and your points work at every restaurant on this page.
+          Delivery is priced by distance and shown in full before you pay.
         </p>
         <Link
           href="/how-it-works"
           className="mt-3 inline-block text-[14.5px] font-extrabold text-brand-strong hover:underline"
         >
-          See where the money goes →
+          How our pricing works →
         </Link>
       </section>
     </main>

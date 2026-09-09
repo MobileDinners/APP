@@ -93,6 +93,23 @@ export default function LandingPage() {
   const cards = buildCards();
   const popular = [...cards].sort((a, b) => b.rating - a.rating).slice(0, 4);
 
+  /**
+   * The headline numbers, minus the ones that were doing harm.
+   *
+   * "0% commission" went because it is a merchant fact on a diner's page. The
+   * restaurant count is only shown when there ARE restaurants — advertising
+   * "0 restaurants" to a customer is worse than showing nothing, and it comes
+   * back on its own the moment somebody publishes, with nobody having to
+   * remember to put it back.
+   */
+  const STATS: [string, string][] = [
+    ["$0", "service fee"],
+    ["1", "points wallet"],
+    ...(cards.length > 0
+      ? ([[`${cards.length}`, "restaurants"]] as [string, string][])
+      : []),
+  ];
+
   return (
     <>
       {/* ------------------------------------------------------------------ hero */}
@@ -248,22 +265,26 @@ export default function LandingPage() {
       <section className="mx-auto max-w-[1280px] px-4 py-14 md:px-6">
         <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-center">
           <div>
+            {/*
+              This section used to explain our commission model to diners —
+              "0% commission, the kitchen keeps the whole ticket", "other apps
+              take 15–30%". True, and none of a customer's business: what a
+              restaurant pays us is a reason for THEM to sign up, and it lives
+              on the partner site. A diner wants to know what THEY pay.
+            */}
             <h2 className="max-w-[22ch] text-balance text-[26px] font-extrabold leading-[1.12] tracking-[-0.03em] md:text-[32px]">
-              0% commission. The kitchen keeps the whole ticket.
+              The price you see is the price on the wall.
             </h2>
             <p className="mt-3 max-w-[62ch] text-[15.5px] leading-relaxed text-ink-2">
-              Other apps take 15–30% of every order, so restaurants raise their
-              prices there to survive it. We charge a flat monthly fee instead —
-              menu prices here match the ones printed inside, and your points work
-              across every restaurant on the network.
+              Menu prices here match the ones printed inside the restaurant, and
+              there is no service fee on top. You pay tax, a tip if you want to
+              leave one, and — if you choose delivery — a fee worked out from how
+              far you are from the kitchen, shown in full before you pay. Your
+              points work at every restaurant on the network.
             </p>
           </div>
-          <dl className="grid grid-cols-3 gap-6 md:gap-9">
-            {[
-              ["0%", "commission"],
-              ["$0", "service fee"],
-              [`${cards.length}`, "restaurants"],
-            ].map(([v, l]) => (
+          <dl className={`grid gap-6 md:gap-9 ${STATS.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
+            {STATS.map(([v, l]) => (
               <div key={l}>
                 <dt className="sr-only">{l}</dt>
                 <dd>

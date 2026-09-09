@@ -21,3 +21,18 @@ export const PLATFORM_ORG_SLUG = "mobile-dinners-platform";
 
 /** Always a platform administrator, no environment variable required. */
 export const PLATFORM_ADMIN_EMAIL = "admin@mobiledinners.com";
+
+/**
+ * The support line, in one place.
+ *
+ * This used to be two different placeholder numbers hardcoded in three spots —
+ * (415) 555-0199 on the consumer help page and (415) 555-0111 twice on the
+ * partner one. A number that lives in three places is a number that gets
+ * changed in two of them, and the one that gets missed is the one a customer
+ * dials at the worst possible moment.
+ *
+ * SUPPORT_PHONE_TEL is what a phone actually dials; SUPPORT_PHONE is what a
+ * person reads. Keep them describing the same number.
+ */
+export const SUPPORT_PHONE = "(888) 656-9419";
+export const SUPPORT_PHONE_TEL = "+18886569419";
