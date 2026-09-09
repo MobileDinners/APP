@@ -158,18 +158,55 @@ export default async function RestaurantsPage({
           All restaurants
         </h2>
         <p className="mt-0.5 text-[14px] text-ink-2">
-          {describeFeed(cards.length, q)} · in-store prices · no service fees
+          {/*
+            Leading with "0 restaurants" is a worse greeting than not counting.
+
+            The populated branch keeps its original shape — an interpolation
+            followed by literal text — rather than being folded into one
+            template string. React separates adjacent text nodes with an HTML
+            comment when it renders on the server, and test-surfaces reads the
+            feed summary by matching up to the next "<". Collapsing this into a
+            single node moves that boundary and the summary swallows the
+            marketing suffix.
+          */}
+          {cards.length > 0 ? (
+            <>{describeFeed(cards.length, q)} · in-store prices · no service fees</>
+          ) : (
+            "In-store prices · no service fees"
+          )}
         </p>
 
         {cards.length === 0 ? (
+          /*
+            Two different empty states wearing one message. "Nothing matches
+            those filters — try removing one" is right when filters excluded
+            everything, and simply untrue when there is nothing on the network
+            to exclude: it blames the reader for a choice they did not make and
+            offers a "Clear filters" button that changes nothing.
+          */
           <div className="mt-8 rounded-[16px] border border-dashed border-line-2 p-12 text-center">
-            <p className="text-[17px] font-extrabold">Nothing matches those filters</p>
-            <p className="mx-auto mt-2 max-w-[44ch] text-[14.5px] text-ink-2">
-              Try removing one — there are {all.length} restaurants open right now.
-            </p>
-            <Link href="/restaurants" className="btn btn-secondary mt-5">
-              Clear filters
-            </Link>
+            {all.length === 0 ? (
+              <>
+                <p className="text-[17px] font-extrabold">No restaurants yet</p>
+                <p className="mx-auto mt-2 max-w-[44ch] text-[14.5px] text-ink-2">
+                  We are signing up kitchens in your area now. Check back shortly —
+                  or tell your favourite restaurant about us.
+                </p>
+                <Link href="/partners" className="btn btn-secondary mt-5">
+                  I run a restaurant
+                </Link>
+              </>
+            ) : (
+              <>
+                <p className="text-[17px] font-extrabold">Nothing matches those filters</p>
+                <p className="mx-auto mt-2 max-w-[44ch] text-[14.5px] text-ink-2">
+                  Try removing one — there are {all.length} restaurants open right now.
+                </p>
+                <Link href="/restaurants" className="btn btn-secondary mt-5">
+                  Clear filters
+                </Link>
+              </>
+            )}
           </div>
         ) : (
           <div className="mt-5 grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3">

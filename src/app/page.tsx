@@ -306,8 +306,12 @@ export default function LandingPage() {
             <h2 className="text-[24px] font-extrabold tracking-[-0.03em]">
               Hungry now?
             </h2>
+            {/* "0 restaurants are taking orders in your area" is a worse
+                invitation than no number at all. */}
             <p className="mt-1.5 text-[15.5px] text-ink-2">
-              {cards.length} restaurants are taking orders in your area.
+              {cards.length > 0
+                ? `${cards.length} restaurants are taking orders in your area.`
+                : "Browse the restaurants near you and order direct."}
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
