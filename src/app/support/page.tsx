@@ -4,9 +4,9 @@ import { Faq, SectionHead } from "@/components/marketing";
 import { SUPPORT_PHONE, SUPPORT_PHONE_TEL } from "@/lib/platform";
 
 export const metadata: Metadata = {
-  title: "Help — Mobile Dinners",
+  title: "Mobile Dinners Help Center",
   description:
-    "Order problems, refunds, missing items, points and account questions — and how to reach a person.",
+    "Order problems, refunds, missing items, points, account questions, and how to reach a person.",
 };
 
 /**
@@ -18,19 +18,19 @@ export const metadata: Metadata = {
 const NOW = [
   {
     q: "Where is my order?",
-    a: "Open it from Orders and the tracking page shows live status straight from the kitchen — accepted, cooking, ready, on the way. The estimate updates as the order moves, and if it slips the page says so rather than holding an optimistic number until the doorbell.",
+    a: "Open it from Orders and the tracking page shows live status straight from the kitchen: accepted, cooking, ready, on the way. The estimate updates as the order moves, and if it slips the page says so rather than holding an optimistic number until the doorbell.",
     href: "/orders",
     cta: "Track an order",
   },
   {
     q: "Something is missing or wrong",
-    a: "Report it from the order's tracking page while the order is still open. It goes straight to the restaurant with the item list and the timeline, and they decide the refund — usually within a few minutes, because they are looking at the same screen you are.",
+    a: "Report it from the order's tracking page while the order is still open. It goes straight to the restaurant with the item list and the timeline, and they decide the refund, usually within a few minutes, because they are looking at the same screen you are.",
     href: "/orders",
     cta: "Find the order",
   },
   {
     q: "I need to cancel",
-    a: "Free until the restaurant accepts it. Once they have started cooking, cancelling is up to them — someone has already bought your ingredients and turned on a burner. Ask through the order page and most will sort it out if it is genuinely early.",
+    a: "Free until the restaurant accepts it. Once they have started cooking, it is up to them. Someone has already bought your ingredients and turned on a burner. Ask through the order page and most will sort it out if it is genuinely early.",
     href: "/orders",
     cta: "Open your orders",
   },
@@ -39,11 +39,11 @@ const NOW = [
 const FAQS = [
   {
     q: "Why are there no service fees?",
-    a: "Because we do not take a cut of your order. Mobile Dinners charges restaurants a flat monthly subscription for the software, so there is no 15–30% commission for anyone to pass on to you as a service fee or a quietly inflated menu price. You pay tax, an optional tip, and — if you choose delivery — a delivery fee calculated from the distance between the restaurant and the address you give us. It is shown in full at checkout before you pay, never added afterwards.",
+    a: "Because we do not take a cut of your order. Mobile Dinners charges restaurants a flat monthly subscription for the software, so there is no 15% to 30% commission for anyone to pass on to you as a service fee or a quietly inflated menu price. You pay tax, an optional tip and, if you choose delivery, a delivery fee calculated from the distance between the restaurant and the address you give us. It is shown in full at checkout before you pay, never added afterwards.",
   },
   {
     q: "How do points work?",
-    a: "You earn points on every order and they sit in one wallet that works at every restaurant on the network — points from Tuesday's tacos pay for Saturday's bakery run. Restaurants set their own earn multipliers, so some days are worth more. Redemption is capped per order so a wallet cannot zero out a ticket.",
+    a: "You earn points on every order and they sit in one wallet that works at every restaurant on the network, so points from Tuesday's tacos pay for Saturday's bakery run. Restaurants set their own earn multipliers, so some days are worth more. Redemption is capped per order so a wallet cannot zero out a ticket.",
   },
   {
     q: "Do my points expire?",
@@ -51,7 +51,7 @@ const FAQS = [
   },
   {
     q: "How do I sign in? I do not remember a password.",
-    a: "There is no password. You enter your phone number and we text a six-digit code. That number is your account — it is also how the restaurant reaches you about an order and where your tracking link goes.",
+    a: "There is no password. You enter your phone number and we text a six-digit code. That number is your account. It is also how the restaurant reaches you about an order, and where your tracking link goes.",
   },
   {
     q: "Can I order without making an account?",
@@ -59,22 +59,22 @@ const FAQS = [
   },
   {
     q: "How do I change my phone number, or delete my account?",
-    a: "From the Rewards page, under account settings. Deleting removes your profile, saved addresses and points balance. Order records are kept where tax law requires it and are disconnected from your identity as far as that allows — the Privacy Policy sets out exactly what is retained and for how long.",
+    a: "From the Rewards page, under account settings. Deleting removes your profile, saved addresses and points balance. Order records are kept where tax law requires it and are disconnected from your identity as far as that allows. The Privacy Policy sets out exactly what is retained and for how long.",
   },
   {
     q: "Who can see my details?",
-    a: "The restaurant you ordered from — name, phone, and the delivery address for that order. That is the point of ordering direct: they should be able to recognise a regular. No other restaurant sees them, we do not sell your data, and we never store your card number.",
+    a: "The restaurant you ordered from receives your name, phone number and the delivery address for that order. That is the point of ordering direct: they should be able to recognize a regular. No other restaurant sees any of it, we do not sell your data, and we never store your card number.",
   },
   {
     q: "The delivery estimate was wrong.",
-    a: "Estimates come from live kitchen data, not a guess, but a kitchen can still get slammed. If an order lands materially late the tracking page will say so while it is happening. If it ruined the meal, report it from the order page — that goes to the restaurant, who can refund.",
+    a: "Estimates come from live kitchen data, not a guess, but a kitchen can still get slammed. If an order lands materially late the tracking page will say so while it is happening. If it ruined the meal, report it from the order page. That goes straight to the restaurant, who can refund it.",
   },
 ];
 
 const CONTACT: {
   name: string;
   detail: string;
-  /** Set when the detail is something a device can act on — dial, or compose. */
+  /** Set when the detail is something a device can act on: dial, or compose. */
   href?: string;
   blurb: string;
   tone: "primary" | "normal";
@@ -82,7 +82,7 @@ const CONTACT: {
   {
     name: "Live chat",
     detail: "In the app, from any order",
-    blurb: "Fastest for anything happening right now — a late order, a missing item, a driver who cannot find the door.",
+    blurb: "Fastest for anything happening right now: a late order, a missing item, a driver who cannot find the door.",
     tone: "primary" as const,
   },
   {
@@ -98,7 +98,7 @@ const CONTACT: {
     // A number a thumb cannot dial is a number that does not get called, and
     // most of this traffic is a phone held one-handed outside a restaurant.
     href: `tel:${SUPPORT_PHONE_TEL}`,
-    blurb: "9am–11pm, every day. Use this if an order has gone badly wrong and you would rather talk to someone.",
+    blurb: "9am to 11pm, every day. Use this if an order has gone badly wrong and you would rather talk to someone.",
     tone: "normal" as const,
   },
 ];
@@ -110,8 +110,8 @@ export default function ConsumerSupportPage() {
         How can we help?
       </h1>
       <p className="mt-2 max-w-[56ch] text-[16px] leading-relaxed text-ink-2">
-        Most problems with an order are fastest to fix from the order itself —
-        the restaurant sees the same timeline you do.
+        Most problems with an order are fastest to fix from the order itself,
+        because the restaurant sees the same timeline you do.
       </p>
 
       {/* --------------------------------------------------- something is wrong */}

@@ -21,15 +21,15 @@ export const metadata: Metadata = {
 const FAQS = [
   {
     q: "So what is the catch?",
-    a: "There is a business model, it is just not you. Restaurants pay a flat monthly subscription for the software — point of sale, website, kitchen display, marketing tools — and the marketplace comes with it. We also make a small, disclosed margin on card processing. Nobody takes a percentage of your dinner.",
+    a: "There is a business model. It is just not you. Restaurants pay a flat monthly subscription for the software, covering the point of sale, website, kitchen display and marketing tools, and the marketplace comes with it. We also make a small, disclosed margin on card processing. Nobody takes a percentage of your dinner.",
   },
   {
     q: "Is this going to get more expensive later?",
-    a: "The zero-commission promise is written into the restaurant contract, not offered as a launch rate. Adding a per-order fee would require every restaurant to sign a new agreement. That is a deliberately high bar, and it is public — it is section 2 of the Terms.",
+    a: "The zero-commission promise is written into the restaurant contract, not offered as a launch rate. Adding a per-order fee would require every restaurant to sign a new agreement. That is a deliberately high bar, and it is public: see section 2 of the Terms.",
   },
   {
     q: "Are the restaurants any good?",
-    a: "They are the same restaurants. This is not a separate class of cheaper places — it is independent kitchens who would rather keep the ticket than hand over a quarter of it. Ranking in the feed is by relevance, distance and real prep times, not by who paid for placement.",
+    a: "They are the same restaurants. This is not a separate class of cheaper places. It is independent kitchens who would rather keep the ticket than hand over a quarter of it. Ranking in the feed is by relevance, distance and real prep times, not by who paid for placement.",
   },
 ];
 
@@ -57,10 +57,9 @@ export default function ConsumerAboutPage() {
           the menu.
         </h2>
         <p className="mt-4 max-w-[62ch] text-[15.5px] leading-relaxed opacity-75">
-          Restaurants run on thin margins, so when an app takes a quarter of the
-          order they raise their prices on that app to survive it — commonly by
-          10–20%. Then a service fee is added on top of the marked-up price, and
-          tax is charged on all of it. You never see any of that itemised. Here
+          Restaurants run on thin margins, so when an app takes a quarter of the order
+          they raise their prices on that app to survive it, commonly by 10% to 20%. Then a service fee is added on top of the marked-up price, and
+          tax is charged on all of it. You never see any of that itemized. Here
           there is no commission, so there is nothing to mark up.
         </p>
 
@@ -125,7 +124,7 @@ export default function ConsumerAboutPage() {
         <SectionHead
           eyebrow="One wallet"
           title="Points from the taqueria buy the bakery"
-          lede="Most loyalty programmes trap you in one restaurant, so you end up with four half-full cards. Here there is one balance and it works everywhere on the network."
+          lede="Most loyalty programs trap you in one restaurant, so you end up with four half-full cards. Here there is one balance and it works everywhere on the network."
         />
         <Link
           href="/rewards"
@@ -142,10 +141,10 @@ export default function ConsumerAboutPage() {
         </h2>
         <ul className="m-0 mt-4 grid list-none gap-2.5 p-0">
           {[
-            "The restaurant you ordered from gets your name, phone and delivery address — that is how they reach you, and how a regular gets recognised.",
+            "The restaurant you ordered from gets your name, phone number and delivery address. That is how they reach you, and how a regular gets recognized.",
             "No other restaurant sees them, and we never market one restaurant's customers on behalf of another.",
             "We do not sell your data to anyone.",
-            "We never store your card number. Payments are tokenised by the processor.",
+            "We never store your card number. Payments are tokenized by the processor.",
           ].map((b) => (
             <li key={b} className="flex gap-2.5 text-[14.5px] leading-snug text-ink-2">
               <span className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
@@ -172,8 +171,8 @@ export default function ConsumerAboutPage() {
       <section className="mt-10 rounded-[16px] border border-line bg-bg-2 p-5">
         <h2 className="text-[16px] font-extrabold">Run a restaurant?</h2>
         <p className="mt-1.5 text-[14.5px] leading-relaxed text-ink-2">
-          The other half of this is a point of sale, a website builder, a CRM and
-          a kitchen display — with no commission on anything sold through it.
+          The other half of this is a point of sale, a website builder, a CRM and a
+          kitchen display, with no commission on anything sold through it.
         </p>
         <Link
           href="/partners"

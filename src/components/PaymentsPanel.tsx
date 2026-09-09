@@ -10,7 +10,7 @@ import { SignOut } from "./SignOut";
  *
  * Two things an owner needs from this screen: whether they can be paid yet,
  * and what they were actually paid on each order. The second is a table with
- * every deduction itemised — a payout summary that only shows a net figure is
+ * every deduction itemized — a payout summary that only shows a net figure is
  * how processors hide their margin.
  */
 
@@ -79,7 +79,7 @@ export function PaymentsPanel({ view }: { view: PaymentsView }) {
             <h2 className="text-[18px] font-extrabold">Payout account</h2>
             <p className="mt-1 max-w-[62ch] text-[14.5px] leading-relaxed text-ink-2">
               {ready
-                ? "Verified. Orders are charged to the diner and settled to your bank account, with the fee on every order itemised below."
+                ? "Verified. Orders are charged to the diner and settled to your bank account, with the fee on every order itemized below."
                 : connected
                   ? "Started, but Stripe still needs a few details before you can be paid. Pick up where you left off — it takes about five minutes."
                   : "Connect a bank account so orders can pay out to you. Stripe handles the verification; we never see or store your bank details."}

@@ -6,7 +6,7 @@ import { getSiteContent } from "@/lib/site-content";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Mobile Dinners — Food delivery with 0% commission",
+  title: "Mobile Dinners: Food Delivery at In-Store Prices",
   description:
     "Order from local restaurants at in-store prices. No service fees, one points wallet that works everywhere.",
 };

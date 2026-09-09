@@ -80,11 +80,11 @@ fi
 echo
 echo "=== 3. partners.mobiledinners.com routes by host ==="
 chk "the partners host serves the merchant pitch"   "$(phost / | grep -c 'What commission costs you')" "1"
-chk "bare /pricing resolves there" "$(phost /pricing | title)" "Pricing — Mobile Dinners"
-chk "and bare /signup too" "$(phost /signup | title)" "Start free — Mobile Dinners"
+chk "bare /pricing resolves there" "$(phost /pricing | title)" "Mobile Dinners Pricing for Restaurants"
+chk "and bare /signup too" "$(phost /signup | title)" "Start Free with Mobile Dinners"
 chk "shared legal pages are not prefixed" "$(phostc /terms)" "200"
 chk "the operator app is reachable on that host" "$(phostc /ops)" "307"
-chk "the consumer host still gets the marketplace"   "$(curl -s --max-time 180 -H 'Host: mobiledinners.com' "$B/" | title)"   "Mobile Dinners — Your favorite meals, delivered to you"
+chk "the consumer host still gets the marketplace"   "$(curl -s --max-time 180 -H 'Host: mobiledinners.com' "$B/" | title)"   "Mobile Dinners: Your Favorite Meals, Delivered"
 
 echo
 echo "=== 3b. a diner can find help, legal and about without leaving their side ==="
@@ -154,7 +154,7 @@ chk "no free-delivery claim anywhere on the feed" "$(occurs $F 'Free delivery')"
 chk "nor in pickup mode" "$(occurs "$F?mode=pickup" 'Free delivery')" "0"
 chk "nor on the rewards page" "$(occurs /rewards 'Free delivery')" "0"
 # Pickup drops the road leg, so it must be quicker than delivery.
-firstEta(){ curl -s --max-time 240 "$B$1" | sed 's/<!-- -->//g' | grep -o '[0-9]\{1,3\}[^0-9 ]\{1,4\}[0-9]\{1,3\} min' | head -1 | grep -o '^[0-9]\+'; }
+firstEta(){ curl -s --max-time 240 "$B$1" | sed 's/<!-- -->//g' | grep -o '[0-9]\{1,3\}[^0-9]\{1,6\}[0-9]\{1,3\} min' | head -1 | grep -o '^[0-9]\+'; }
 PU=$(firstEta "$F?mode=pickup&sort=time")
 DEL=$(firstEta "$F?sort=time")
 if [ "$PU" -lt "$DEL" ]; then

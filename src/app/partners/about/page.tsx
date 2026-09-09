@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { CtaBand, Card, Eyebrow, PageHero, SectionHead, Stat, Wrap } from "@/components/marketing";
 
 export const metadata: Metadata = {
-  title: "About — Mobile Dinners",
+  title: "About Mobile Dinners",
   description:
     "Why a zero-commission marketplace has to own the point of sale, and what we will and will not do with a restaurant's customers.",
 };
@@ -18,7 +18,7 @@ const PRINCIPLES = [
     p: "It is written into the contract. We are paid by subscription, by a disclosed payment spread and by optional add-ons. Changing that would require a new contract you have to sign.",
   },
   {
-    h: "Ranking is not for sale — much",
+    h: "Ranking is not for sale, at any price",
     p: "The feed ranks by relevance, distance and real prep times. Sponsored slots exist, are labelled, and are capped at one card in ten. If that cap ever moves, it moves in public.",
   },
   {
@@ -32,7 +32,7 @@ const TIMELINE = [
     when: "The problem",
     what: "A 25% commission on a business with 6% margins",
     detail:
-      "For most independent restaurants, marketplace orders are not incremental profit — they are volume sold at a loss, subsidised by the dine-in room. Owners know this. They stay because the demand is real and the alternative is invisibility.",
+      "For most independent restaurants, marketplace orders are not incremental profit. They are volume sold at a loss, subsidized by the dine-in room. Owners know this. They stay because the demand is real and the alternative is invisibility.",
   },
   {
     when: "The false start",
@@ -44,13 +44,13 @@ const TIMELINE = [
     when: "The insight",
     what: "You cannot be free unless you own the rails",
     detail:
-      "Demand has to sit on top of the point of sale, not beside it. Owning the POS, the menu of record and the payments means the marketplace can be run at cost — the subscription and the payment spread already pay for it. That is why this is one system and not five integrations.",
+      "Demand has to sit on top of the point of sale, not beside it. Owning the POS, the menu of record and the payments means the marketplace can be run at cost, because the subscription and the payment spread already pay for it. That is why this is one system and not five integrations.",
   },
   {
     when: "Now",
     what: "One system, three surfaces, one database",
     detail:
-      "Operations, growth and demand, split by how badly each fails, running against one menu of record and one customer record. Everything on this site is the live build — place an order and watch it cross all three surfaces.",
+      "Operations, growth and demand, split by how badly each fails, running against one menu of record and one customer record. Everything on this site is the live build, so you can place an order and watch it cross all three surfaces.",
   },
 ];
 
@@ -106,7 +106,7 @@ export default function AboutPage() {
         <SectionHead
           eyebrow="How we got here"
           title="Four steps to a fairly unusual architecture"
-          lede="This is a sequence, not a list — each step only makes sense because the one before it failed."
+          lede="This is a sequence, not a list. Each step only makes sense because the one before it failed."
         />
 
         <ol className="m-0 mt-10 grid list-none gap-0 p-0">

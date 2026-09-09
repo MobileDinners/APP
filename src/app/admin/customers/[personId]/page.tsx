@@ -80,7 +80,7 @@ export default async function CustomerDetail({
               <Th>Restaurant</Th>
               <Th>Placed</Th>
               <Th>State</Th>
-              <Th>Fulfilment</Th>
+              <Th>Fulfillment</Th>
               <Th right>Total</Th>
             </tr>
           </thead>

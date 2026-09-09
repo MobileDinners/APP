@@ -100,7 +100,7 @@ export function Storefront({
             <span className="flex items-center gap-1 text-ink-2">
               <ClockIcon className="h-3.5 w-3.5" />
               <span className="num">
-                {etaLow}–{etaHigh} min
+                {etaLow} to {etaHigh} min
               </span>
             </span>
             <span className="num text-ink-2">

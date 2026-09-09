@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { CtaBand, Card, Eyebrow, PageHero, SectionHead, Wrap } from "@/components/marketing";
 
 export const metadata: Metadata = {
-  title: "Features — Mobile Dinners",
+  title: "Mobile Dinners Features for Restaurants",
   description:
     "POS, kitchen display, menu of record, website builder, CRM, campaigns with holdouts, loyalty, upsell engine, menu optimizer, Square and Clover coexist mode.",
 };
@@ -27,10 +27,10 @@ const FEATURES: Feature[] = [
     body:
       "Counter, phone, marketplace and your own website all produce the same order record, priced against the same menu version and routed by the same rules. There is no separate 'online orders' tablet to reconcile at close.",
     bullets: [
-      "Append-only event log — the order's state is a fold over its history, never an overwrite",
+      "Append-only event log: the order's state is a fold over its history, never an overwrite",
       "Offline gateway keeps taking orders when the internet drops, replays on reconnect",
       "Square and Clover coexist mode: keep your terminals, push our orders into your till",
-      "Integer cents end to end — no floating point anywhere near money",
+      "Integer cents end to end, so no floating point anywhere near money",
     ],
     status: "Live",
   },
@@ -43,7 +43,7 @@ const FEATURES: Feature[] = [
       "The menu you edit is a draft. Publishing freezes it into an immutable, content-hashed version, and every order records which version it was priced against. Change a price tomorrow and it cannot rewrite what a guest agreed to pay today.",
     bullets: [
       "Draft vs published, with a diff before you commit",
-      "Availability is live — 86 an item and it greys out instantly, no republish needed",
+      "Availability is live: 86 an item and it grays out instantly, no republish needed",
       "Claims filter blocks allergen and health claims from ever reaching a guest",
       "Items that have been ordered can be hidden, never deleted, so receipts stay intact",
     ],
@@ -58,7 +58,7 @@ const FEATURES: Feature[] = [
       "Tickets route to the station that actually cooks the item. The line sees elapsed time against the promise made to the guest, not a generic timer, so late is visible before it is a refund.",
     bullets: [
       "Per-station queues with item-level bumping",
-      "Live promise clock — the same number the guest is watching",
+      "Live promise clock, showing the same number the guest is watching",
       "Order state changes fan out over a live connection, no polling",
     ],
     status: "Live",
@@ -69,7 +69,7 @@ const FEATURES: Feature[] = [
     plane: "Growth",
     line: "A real site, generated from your menu, with an SEO audit",
     body:
-      "Generates a full page model — hero, story, menu highlights, hours, location, FAQ — from what is already in your account. It is a draft you edit, not a template you fill in, and it runs a copy audit before it will publish.",
+      "Generates a full page model, covering hero, story, menu highlights, hours, location and FAQ, from what is already in your account. It is a draft you edit, not a template you fill in, and it runs a copy audit before it will publish.",
     bullets: [
       "Draft / published split, same discipline as the menu",
       "Claims filter refuses to publish allergen or health claims",
@@ -82,14 +82,14 @@ const FEATURES: Feature[] = [
     id: "crm",
     name: "CRM and customer profiles",
     plane: "Growth",
-    line: "Every guest, every order, in your database — not theirs",
+    line: "Every guest, every order, in your database rather than theirs",
     body:
-      "A marketplace order is not an anonymous ticket. It is a customer profile with contact details, order history, favourite items, spend and a lifecycle stage you own outright and can export at any time.",
+      "A marketplace order is not an anonymous ticket. It is a customer profile with contact details, order history, favorite items, spend and a lifecycle stage you own outright and can export at any time.",
     bullets: [
       "Automatic lifecycle segmentation: new, active, at-risk, lapsed, VIP",
       "Recency, frequency and monetary scoring on real order history",
       "Segment builder that feeds campaigns directly",
-      "CSV export and API access — leaving is not a hostage negotiation",
+      "CSV export and API access, because leaving should not be a hostage negotiation",
     ],
     status: "Live",
   },
@@ -99,7 +99,7 @@ const FEATURES: Feature[] = [
     plane: "Growth",
     line: "Incrementality, not attribution",
     body:
-      "Every campaign randomly holds back a control group. The number you are shown is treated minus holdout with a confidence interval — the revenue that would not have happened otherwise, rather than credit for orders you were getting anyway.",
+      "Every campaign randomly holds back a control group. The number you are shown is treated minus holdout with a confidence interval: the revenue that would not have happened otherwise, rather than credit for orders you were getting anyway.",
     bullets: [
       "SMS and email, with quiet hours and frequency caps enforced in code",
       "Welch two-sample confidence interval on every result",
@@ -114,12 +114,12 @@ const FEATURES: Feature[] = [
     plane: "Demand",
     line: "One wallet, every restaurant on the network",
     body:
-      "Points earned at a taqueria spend at a bakery. It costs each restaurant less than a single-brand programme and gives the diner a reason to stay inside the network instead of drifting to an aggregator.",
+      "Points earned at a taqueria spend at a bakery. It costs each restaurant less than a single-brand program and gives the diner a reason to stay inside the network instead of drifting to an aggregator.",
     bullets: [
       "One points balance across every restaurant",
       "Per-restaurant earn multipliers you control",
       "Redemption capped per order so a wallet cannot zero out a ticket",
-      "Full ledger — every point earned, spent and expired is an entry you can audit",
+      "Full ledger: every point earned, spent and expired is an entry you can audit",
     ],
     status: "Live",
   },
@@ -129,10 +129,10 @@ const FEATURES: Feature[] = [
     plane: "Growth",
     line: "Co-purchase lift, measured against a control",
     body:
-      "Suggests the item that actually goes with what is in the cart, ranked by lift — how much more likely B is given A, versus B on its own — not by raw co-occurrence, which just recommends whatever is popular.",
+      "Suggests the item that actually goes with what is in the cart, ranked by lift, meaning how much more likely B is given A versus B on its own, rather than by raw co-occurrence, which just recommends whatever is popular.",
     bullets: [
       "Lift ranking, so the fries do not get recommended to everyone forever",
-      "Every impression randomised into treated or control",
+      "Every impression randomized into treated or control",
       "Measured attach rate and revenue per cart, per suggestion",
     ],
     status: "Live",
@@ -148,7 +148,7 @@ const FEATURES: Feature[] = [
       "Item-level elasticity priors by role: signature, staple, commodity",
       "Margin and volume effects reported separately",
       "Confidence intervals, not point estimates dressed as certainty",
-      "Decision log — predictions sit next to what actually happened",
+      "Decision log, where predictions sit next to what actually happened",
     ],
     status: "Live",
   },
@@ -158,7 +158,7 @@ const FEATURES: Feature[] = [
     plane: "Demand",
     line: "Aggregator demand without the aggregator tax",
     body:
-      "Diners get the app experience they expect — browse, filter, track, reorder — and restaurants keep the entire ticket. Ranking is by relevance and real prep times, not by who paid for placement.",
+      "Diners get the app experience they expect, from browsing and filtering to tracking and reordering, and restaurants keep the entire ticket. Ranking is by relevance and real prep times, not by who paid for placement.",
     bullets: [
       "No commission on any order, on any plan",
       "Live kitchen status feeds real ETAs instead of optimistic guesses",
@@ -170,12 +170,12 @@ const FEATURES: Feature[] = [
     id: "payments",
     name: "Payments and payouts",
     plane: "Operations",
-    line: "Cost-plus processing with an itemised statement",
+    line: "Cost-plus processing with an itemized statement",
     body:
-      "Card processing at 2.6% + 10¢ card-present and 2.9% + 30¢ card-not-present, with interchange itemised separately from our spread on every payout so the number is checkable rather than trusted.",
+      "Card processing at 2.6% + 10¢ card-present and 2.9% + 30¢ card-not-present, with interchange itemized separately from our spread on every payout so the number is checkable rather than trusted.",
     bullets: [
       "Next-day payouts",
-      "Tokenised cards — no card number ever touches our database",
+      "Tokenized cards, so no card number ever touches our database",
       "Refunds and partial refunds from the same order timeline",
     ],
     status: "In build",
@@ -254,7 +254,7 @@ export default function FeaturesPage() {
           <SectionHead
             eyebrow="Not a mockup"
             title="Every surface on this page is running right now"
-            lede="This build is the real system, not screenshots. Open any of the three surfaces and place an order — it will move through all of them."
+            lede="This build is the real system, not screenshots. Open any of the three surfaces and place an order, and it will move through all of them."
           />
           <div className="mt-8 grid gap-4 md:grid-cols-3">
             {[

@@ -174,8 +174,8 @@ function PartnersFooter() {
           <div>
             <LogoLockup markClass="h-12 w-auto" typeClass="text-[21px]" />
             <p className="mt-3 max-w-[30ch] text-[14px] leading-relaxed text-ink-2">
-              The point of sale, the website, the marketing and the marketplace —
-              one system, zero commission on every order.
+              The point of sale, the website, the marketing and the marketplace in one
+              system, with zero commission on every order.
             </p>
             <Link
               href="/"

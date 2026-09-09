@@ -6,7 +6,7 @@ import {
 import { Chip, MetricStat, Panel, Stat, TableWrap, Td, Th, shortDate, timeAgo } from "@/components/admin/AdminUI";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Delivery operations — Admin" };
+export const metadata = { title: "Admin Delivery Operations" };
 
 /** Terminal courier states, so a failure can be told from a trip in progress. */
 const FAILED = new Set(["cancelled", "canceled", "failed", "returned"]);
@@ -28,7 +28,7 @@ export default function DeliveryPage() {
     <>
       <h1 className="text-[24px] font-extrabold tracking-[-0.03em]">Delivery operations</h1>
       <p className="mt-1 text-[14px] text-ink-3">
-        DoorDash Drive control centre — couriers we book, not the DoorDash marketplace.
+        DoorDash Drive control center: couriers we book, not the DoorDash marketplace.
       </p>
 
       {configured < integrations.length && (
@@ -37,7 +37,7 @@ export default function DeliveryPage() {
           {configured} of {integrations.length} DoorDash credentials are set, so no courier can
           be booked and every figure on this page has no data behind it. The
           adapter, the JWT signing and the webhook handler are all built and
-          tested against a sandbox — what is missing is the credentials. Add them
+          tested against a sandbox. What is missing is the credentials. Add them
           in{" "}
           <Link href="/admin/settings" className="font-extrabold underline">
             System
@@ -71,7 +71,7 @@ export default function DeliveryPage() {
           metric={econ}
           render={(v) => ({
             value: formatCents(v.marginCents),
-            sub: `${v.subsidised} trip(s) subsidised`,
+            sub: `${v.subsidized} trip(s) subsidized`,
             tone: v.marginCents >= 0 ? "good" : "bad",
           })}
         />
@@ -119,7 +119,7 @@ export default function DeliveryPage() {
               <tr>
                 <td colSpan={9} className="px-3 py-8 text-center text-[13.5px] text-ink-3">
                   No courier has ever been booked. Once Drive credentials are set, a trip is
-                  requested when an order reaches READY — not at checkout, so a kitchen
+                  requested when an order reaches READY, not at checkout, so a kitchen
                   running late does not leave a courier waiting.
                 </td>
               </tr>
@@ -207,7 +207,7 @@ export default function DeliveryPage() {
         <div className="rounded-[12px] border border-amber bg-amber-soft p-4 text-[13.5px] leading-relaxed text-amber">
           <strong className="font-extrabold">Distances are not real.</strong> Every
           restaurant&apos;s <span className="num">distance_mi</span> is a seeded value, and
-          nothing geocodes a diner&apos;s address — so the delivery fee quoted at checkout
+          nothing geocodes a diner&apos;s address, so the delivery fee quoted at checkout
           varies by a number that was made up at seed time, and ETAs are computed from
           kitchen prep plus a fixed travel allowance rather than a route. Fixing this needs
           a geocoding provider (MAPS_API_KEY) and a real distance call. Until then, treat

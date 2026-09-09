@@ -19,7 +19,7 @@ import { PinIcon } from "@/components/icons";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Mobile Dinners — Your favorite meals, delivered to you",
+  title: "Mobile Dinners: Your Favorite Meals, Delivered",
   description:
     "Order from local restaurants at in-store prices. No service fees, and one points wallet that works at every restaurant on the network.",
 };
@@ -57,7 +57,7 @@ const FEATURES = [
   {
     Icon: ShieldIcon,
     title: "Secure Payments",
-    body: "Cards are tokenised by the processor. We never store a card number.",
+    body: "Cards are tokenized by the processor. We never store a card number.",
   },
   {
     Icon: HeadsetIcon,
@@ -124,7 +124,7 @@ export default function LandingPage() {
             </h1>
             <p className="mt-5 max-w-[42ch] text-[17px] leading-relaxed text-ink-2">
               Delicious meals from your favorite restaurants, delivered fast to your
-              door — at the prices printed inside, with no service fee.
+              door, at the prices printed inside and with no service fee.
             </p>
 
             <form
@@ -277,9 +277,9 @@ export default function LandingPage() {
             </h2>
             <p className="mt-3 max-w-[62ch] text-[15.5px] leading-relaxed text-ink-2">
               Menu prices here match the ones printed inside the restaurant, and
-              there is no service fee on top. You pay tax, a tip if you want to
-              leave one, and — if you choose delivery — a fee worked out from how
-              far you are from the kitchen, shown in full before you pay. Your
+              there is no service fee on top. You pay tax, a tip if you want to leave one and, if you choose delivery, a
+              fee worked out from how far you are from the kitchen. It is shown in full
+              before you pay. Your
               points work at every restaurant on the network.
             </p>
           </div>

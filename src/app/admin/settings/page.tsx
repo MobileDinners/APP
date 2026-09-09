@@ -4,7 +4,7 @@ import { storageIsDurable } from "@/lib/site-content";
 import { Chip, Panel, Stat, TableWrap, Td, Th, shortDate } from "@/components/admin/AdminUI";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "System — Admin" };
+export const metadata = { title: "Admin System" };
 
 /** Where each webhook has to be pointed, so nobody has to grep for the path. */
 const WEBHOOKS = [
@@ -24,7 +24,7 @@ const WEBHOOKS = [
     label: "Square / Clover OAuth return",
     path: "/api/pos/callback",
     secret: "—",
-    events: "authorisation code exchange",
+    events: "authorization code exchange",
   },
 ];
 
@@ -67,7 +67,7 @@ export default function SettingsPage() {
         <div className="mt-5 rounded-[12px] border border-red bg-red-soft p-4 text-[13.5px] leading-relaxed text-red">
           <strong className="font-extrabold">No persistent disk.</strong> MD_DATA_DIR is
           unset, so the database lives inside the container. Every deploy and every idle
-          spin-down destroys it — restaurants, customers, orders, subscriptions, all of it.
+          spin-down destroys it: restaurants, customers, orders, subscriptions, all of it.
           Nothing on this dashboard survives a restart until a disk is mounted and
           MD_DATA_DIR points at it.
         </div>
@@ -102,7 +102,7 @@ export default function SettingsPage() {
                     className={`text-[12.5px] ${
                       i.detail.startsWith("LIVE")
                         ? "font-extrabold text-red"
-                        : i.detail.startsWith("EPHEMERAL") || i.detail.startsWith("not set —")
+                        : i.detail.startsWith("EPHEMERAL") || i.detail.startsWith("not set:")
                           ? "font-bold text-amber"
                           : "text-ink-3"
                     }`}
@@ -115,7 +115,7 @@ export default function SettingsPage() {
           </tbody>
         </TableWrap>
         <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
-          Secrets are set in the hosting environment, never in this interface — a form that
+          Secrets are set in the hosting environment, never in this interface, because a form that
           writes a live Stripe key into the application database would put it somewhere far
           weaker than where it is now, and would print it back to whoever opened this page.
         </p>
@@ -191,8 +191,8 @@ export default function SettingsPage() {
         )}
         <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
           Platform admin is granted by environment variable rather than by a database flag,
-          on purpose: it means an attacker who reaches the database — or who compromises a
-          restaurant owner&apos;s account — still cannot promote themselves. Changing it needs
+          on purpose: it means an attacker who reaches the database, or who compromises
+          a restaurant owner&apos;s account, still cannot promote themselves. Changing it needs
           access to the hosting environment.
         </p>
       </Panel>

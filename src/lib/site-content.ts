@@ -62,7 +62,7 @@ export const DEFAULT_CONTENT: SiteContent = {
     {
       heading: "Help",
       links: [
-        { href: "/support", label: "Help centre" },
+        { href: "/support", label: "Help center" },
         { href: "/support#contact", label: "Contact us" },
         { href: "/orders", label: "Report an order problem" },
         { href: "/signin", label: "Sign in" },

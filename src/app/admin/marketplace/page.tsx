@@ -7,7 +7,7 @@ import { Chip, Panel, Stat, TableWrap, Td, Th } from "@/components/admin/AdminUI
 import { VisibilityToggle } from "@/components/admin/VisibilityToggle";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Marketplace — Admin" };
+export const metadata = { title: "Admin Marketplace" };
 
 /**
  * Loyalty tiers, as the customer-facing rewards page defines them.
@@ -137,7 +137,7 @@ export default function MarketplacePage() {
             </tbody>
           </TableWrap>
           <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
-            The category tiles on the marketplace feed are a separate, hardcoded list — they
+            The category tiles on the marketplace feed are a separate, hardcoded list. They
             are browse shortcuts rather than a taxonomy, and they do not have to match this
             table.
           </p>
@@ -217,7 +217,7 @@ export default function MarketplacePage() {
         <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
           These thresholds are defined in code and shown here read-only on purpose. Editing
           them re-tiers thousands of existing wallets and changes what the rewards page
-          promises people who have already earned — that needs a migration and a decision
+          promises people who have already earned, which needs a migration and a decision
           about grandfathering, not a text box on an admin screen.
         </p>
       </Panel>

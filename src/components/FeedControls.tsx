@@ -8,7 +8,7 @@ import {
 } from "@/lib/feed";
 
 /**
- * The control strip above the feed: fulfilment toggle, filter chips, sort.
+ * The control strip above the feed: fulfillment toggle, filter chips, sort.
  *
  * Every control is a link, not a button with an onClick. That is not laziness —
  * it means the whole thing works before hydration, each view has its own URL to

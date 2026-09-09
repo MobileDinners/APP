@@ -97,7 +97,7 @@ export function RailArrow({
   side: "left" | "right";
   hidden: boolean;
   onClick: () => void;
-  /** Vertical centre of the thing being scrolled, as a Tailwind top-* class. */
+  /** Vertical center of the thing being scrolled, as a Tailwind top-* class. */
   topClass?: string;
 }) {
   if (hidden) return null;

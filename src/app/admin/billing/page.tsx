@@ -7,7 +7,7 @@ import {
 } from "@/components/admin/AdminUI";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Payments & billing — Admin" };
+export const metadata = { title: "Admin Payments and Billing" };
 
 export default async function BillingPage({
   searchParams,
@@ -34,7 +34,7 @@ export default async function BillingPage({
     <>
       <h1 className="text-[24px] font-extrabold tracking-[-0.03em]">Payments &amp; billing</h1>
       <p className="mt-1 text-[14px] text-ink-3">
-        Subscriptions are the platform&apos;s revenue — Mobile Dinners takes 0% of a ticket.
+        Subscriptions are the platform&apos;s revenue. Mobile Dinners takes 0% of a ticket.
       </p>
 
       {/* ------------------------------------------------------------ MRR */}
@@ -49,13 +49,13 @@ export default async function BillingPage({
         <Stat
           label="At risk"
           value={formatCents(mrr.pastDueCents)}
-          sub="past due — card failed, contract alive"
+          sub="past due: card failed, contract alive"
           tone={mrr.pastDueCents > 0 ? "bad" : "plain"}
         />
         <Stat
           label="In trial"
           value={formatCents(mrr.trialingCents)}
-          sub={`${mrr.counts.trialing} restaurant(s) — NOT counted in MRR`}
+          sub={`${mrr.counts.trialing} restaurant(s), NOT counted in MRR`}
           tone="plain"
         />
       </div>
@@ -231,7 +231,7 @@ export default async function BillingPage({
       {/* ------------------------------------------- order-level payments */}
       <Panel
         title="Order payments"
-        hint="Card charges on diner orders — a different thing from subscriptions."
+        hint="Card charges on diner orders, which are a different thing from subscriptions."
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <MetricStat
@@ -272,7 +272,7 @@ export default async function BillingPage({
             {hooks.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-3 py-8 text-center text-[13.5px] text-ink-3">
-                  No webhook has ever arrived. Stripe is not connected — set
+                  No webhook has ever arrived. Stripe is not connected. Set
                   STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET, and point an endpoint at
                   /api/payments/webhook.
                 </td>

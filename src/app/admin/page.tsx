@@ -6,7 +6,7 @@ import { BarChart, Chip, MetricStat, Panel, Stat, TableWrap, Td, Th, timeAgo } f
 
 export const dynamic = "force-dynamic";
 
-export const metadata = { title: "Admin — Mobile Dinners" };
+export const metadata = { title: "Mobile Dinners Admin" };
 
 function pct(n: number): string {
   return `${(n * 100).toFixed(1)}%`;
@@ -69,7 +69,7 @@ export default function AdminHome() {
         <Stat
           label="Gross merchandise value"
           value={formatCents(o.gmvCents)}
-          sub="What diners paid on completed orders — not platform revenue"
+          sub="What diners paid on completed orders, not platform revenue"
         />
         <MetricStat
           label="Delivery success rate"
@@ -135,7 +135,7 @@ export default function AdminHome() {
           {o.mrr.counts.past_due > 0 && (
             <Alert tone="bad" href="/admin/billing?status=failed">
               {o.mrr.counts.past_due} subscription
-              {o.mrr.counts.past_due === 1 ? " is" : "s are"} past due —{" "}
+              {o.mrr.counts.past_due === 1 ? " is" : "s are"} past due:{" "}
               {formatCents(o.mrr.pastDueCents)} of MRR at risk.
             </Alert>
           )}

@@ -7,7 +7,7 @@ import { getWallet, listOrders, listRestaurants } from "@/lib/orders";
 import { formatCents, pointsToCents } from "@/lib/money";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Your account — Mobile Dinners" };
+export const metadata: Metadata = { title: "Your Mobile Dinners Account" };
 
 const TIERS = [
   { name: "bronze", orders: 0, perk: "1× points" },

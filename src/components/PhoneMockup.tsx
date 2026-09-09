@@ -97,7 +97,7 @@ export function PhoneMockup({ cards }: { cards: FeedCard[] }) {
                 {r.brandName}
               </span>
               <span className="num mt-0.5 flex items-center gap-1 text-[9.5px] text-ink-3">
-                {r.etaLow}–{r.etaHigh} min
+                {r.etaLow} to {r.etaHigh} min
                 <StarIcon className="h-2.5 w-2.5 text-ink-2" />
                 {r.rating.toFixed(1)}
               </span>

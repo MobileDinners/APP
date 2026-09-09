@@ -155,7 +155,7 @@ export default async function DeliveryOpsPage() {
         )}
         <p className="mt-4 text-[12.5px] leading-relaxed text-ink-3">
           The courier fee is what DoorDash Drive charges Mobile Dinners for the
-          drop. It is never deducted from the restaurant — the whole ticket still
+          drop. It is never deducted from the restaurant, and the whole ticket still
           reaches the kitchen. The gap between those two columns is a platform
           cost, shown per delivery so the guest fee can be priced against
           something real.

@@ -135,12 +135,12 @@ export function CommissionCalculator() {
           <span className="text-[15px] font-bold"> / month</span>
         </p>
         <p className="num mt-1.5 text-[14px] font-bold text-green">
-          {savedYear > 0 ? usd(savedYear) : usd(0)} a year — on the same orders.
+          {savedYear > 0 ? usd(savedYear) : usd(0)} a year, on the same orders.
         </p>
       </div>
 
       <Link href="/partners/signup" className="btn btn-primary mt-4 w-full">
-        Start free — keep it all
+        Start free and keep it all
       </Link>
 
       <p className="mt-3 text-[12px] leading-relaxed text-ink-3">

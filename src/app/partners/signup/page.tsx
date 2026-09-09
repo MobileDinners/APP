@@ -4,7 +4,7 @@ import { SignupForm } from "@/components/SignupForm";
 import { Eyebrow, Wrap } from "@/components/marketing";
 
 export const metadata: Metadata = {
-  title: "Start free — Mobile Dinners",
+  title: "Start Free with Mobile Dinners",
   description:
     "Create a restaurant account, add your menu and publish. No card required, no contract, 0% commission on every order.",
 };
@@ -37,7 +37,7 @@ export default function SignupPage() {
             Take your first order today
           </h1>
           <p className="mt-4 max-w-[54ch] text-[17px] leading-relaxed text-ink-2">
-            This creates a real restaurant on this system — your own operator
+            This creates a real restaurant on this system, with your own operator
             dashboard, menu of record, kitchen display and marketplace listing. No
             card, no sales call, nothing charged today.
           </p>

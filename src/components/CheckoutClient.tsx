@@ -114,7 +114,7 @@ export function CheckoutClient({
 
   /**
    * The checkout button. For a signed-out diner this opens verification rather
-   * than navigating away, so the cart, the tip and the fulfilment choice all
+   * than navigating away, so the cart, the tip and the fulfillment choice all
    * survive — leaving the page to sign in is what loses the order.
    */
   function checkout() {

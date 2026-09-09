@@ -5,7 +5,7 @@ import { PLANS } from "@/lib/billing";
 import { Chip, Panel, Stat, TableWrap, Td, Th, timeAgo } from "@/components/admin/AdminUI";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Merchants — Admin" };
+export const metadata = { title: "Admin Merchants" };
 
 export default function MerchantsPage() {
   const rows = listMerchants();

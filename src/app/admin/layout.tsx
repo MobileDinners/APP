@@ -41,7 +41,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <div className="ml-auto flex items-center gap-3 text-[12.5px] text-ink-3">
             {!storageIsDurable() && (
               <span className="hidden rounded-full border border-amber bg-amber-soft px-2.5 py-1 text-[10.5px] font-extrabold uppercase tracking-wide text-amber sm:inline">
-                No disk — data is ephemeral
+                No disk: data is ephemeral
               </span>
             )}
             <Link href="/" className="font-semibold hover:text-ink">

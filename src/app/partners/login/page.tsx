@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Eyebrow, Wrap } from "@/components/marketing";
 
 export const metadata: Metadata = {
-  title: "Log in — Mobile Dinners",
+  title: "Log In to Mobile Dinners",
   description:
     "Diners sign in with a phone number and a one-time code. Restaurant staff sign in with an email and password.",
 };
@@ -23,7 +23,7 @@ const DOORS = [
     tag: "Restaurants",
     title: "Run a restaurant",
     blurb:
-      "Email and password. Owners, managers and shift leads each see a different set of controls — the operator dashboard, the menu, and the kitchen display.",
+      "Email and password. Owners, managers and shift leads each see a different set of controls across the operator dashboard, the menu and the kitchen display.",
     cta: "Staff sign in",
     primary: false,
   },
@@ -47,7 +47,7 @@ export default function LoginPage() {
           </h1>
           <p className="mx-auto mt-4 max-w-[52ch] text-[16.5px] leading-relaxed text-ink-2">
             Diners and staff authenticate differently, because they need different
-            things — one is on a phone in a hallway, the other is on a terminal in a
+            things. One is on a phone in a hallway, the other is on a terminal in a
             kitchen.
           </p>
         </div>

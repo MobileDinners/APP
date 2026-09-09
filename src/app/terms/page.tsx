@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { LegalPage } from "@/components/marketing";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — Mobile Dinners",
+  title: "Mobile Dinners Terms of Service",
   description:
     "The agreement between Mobile Dinners and the restaurants and diners who use it, including the zero-commission pledge.",
 };
@@ -13,7 +13,7 @@ export default function TermsPage() {
     <LegalPage
       title="Terms of Service"
       updated="September 3, 2026"
-      summary="These terms cover both sides of the network: restaurants who sell through Mobile Dinners, and diners who order through it. They are written to be read rather than survived. This build is a demonstration environment — see section 12."
+      summary="These terms cover both sides of the network: restaurants who sell through Mobile Dinners, and diners who order through it. They are written to be read rather than survived. This build is a demonstration environment. See section 12."
       sections={[
         {
           id: "agreement",
@@ -23,7 +23,7 @@ export default function TermsPage() {
               <p>
                 These terms form a contract between Mobile Dinners, Inc.
                 (&ldquo;we&rdquo;) and you. If you create a restaurant account, you are
-                agreeing on behalf of that business and confirming you are authorised
+                agreeing on behalf of that business and confirming you are authorized
                 to do so. If you order food, you are agreeing as an individual.
               </p>
               <p>
@@ -53,12 +53,12 @@ export default function TermsPage() {
               <ul>
                 <li>the monthly subscription for the plan you choose;</li>
                 <li>
-                  a disclosed spread on card processing, itemised separately from
+                  a disclosed spread on card processing, itemized separately from
                   interchange on every payout statement;
                 </li>
                 <li>
-                  optional add-ons you actively purchase — extra SMS credits,
-                  hardware, additional terminals, capital advances;
+                  optional add-ons you actively purchase, such as extra SMS credits,
+                  hardware, additional terminals and capital advances;
                 </li>
                 <li>
                   clearly labelled sponsored placement in the marketplace, capped at
@@ -80,8 +80,8 @@ export default function TermsPage() {
           body: (
             <>
               <p>
-                Restaurant accounts have three roles — owner, manager and shift lead —
-                with different permissions. Only owners may publish a menu, connect a
+                Restaurant accounts have three roles with different permissions: owner,
+                manager and shift lead. Only owners may publish a menu, connect a
                 payment or POS account, or change billing. You are responsible for who
                 you give access to and for keeping credentials secret.
               </p>
@@ -127,9 +127,9 @@ export default function TermsPage() {
             <>
               <p>
                 An order is an agreement between the diner and the restaurant. We
-                provide the software that carries it. A restaurant may decline an
-                order before accepting it — because it is closed, out of an item, or
-                cannot meet the promised time — and the diner is not charged.
+                provide the software that carries it. A restaurant may decline an order before accepting it, because it is
+                closed, out of an item, or cannot meet the promised time. In that case
+                the diner is not charged.
               </p>
               <p>
                 Once a restaurant has accepted an order and started cooking, it may no
@@ -138,10 +138,10 @@ export default function TermsPage() {
                 order timeline that shows what actually happened and when.
               </p>
               <p>
-                Where the failure is ours — the platform lost the ticket, the display
-                did not receive it, the tracking page showed a time the system knew
-                was wrong — we refund the diner and do not charge it back to the
-                restaurant.
+                Where the failure is ours, we refund the diner and do not charge it back
+                to the restaurant. That covers the platform losing the ticket, the
+                display not receiving it, and the tracking page showing a time the
+                system knew was wrong.
               </p>
             </>
           ),
@@ -163,8 +163,7 @@ export default function TermsPage() {
               </p>
               <p>
                 We may change subscription pricing with at least 60 days&rsquo; notice.
-                A price change never takes effect during a paid annual term, and it
-                never converts into a per-order fee — see section 2.
+                A price change never takes effect during a paid annual term, and it never converts into a per-order fee. See section 2.
               </p>
             </>
           ),
@@ -256,7 +255,7 @@ export default function TermsPage() {
                 </li>
                 <li>
                   attempt to access another tenant&rsquo;s data, probe for
-                  vulnerabilities without authorisation, or scrape the marketplace;
+                  vulnerabilities without authorization, or scrape the marketplace;
                 </li>
                 <li>place orders you do not intend to pay for or collect.</li>
               </ul>

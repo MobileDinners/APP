@@ -4,7 +4,7 @@ import { engagementSummary, listCustomers } from "@/lib/admin";
 import { Chip, Panel, Stat, TableWrap, Td, Th, shortDate } from "@/components/admin/AdminUI";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Customers — Admin" };
+export const metadata = { title: "Admin Customers" };
 
 const PAGE = 50;
 

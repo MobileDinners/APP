@@ -8,7 +8,7 @@ import { CtaBand, Card, Eyebrow, SectionHead, Stat, Wrap } from "@/components/ma
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Mobile Dinners — POS, website, marketing and a 0% marketplace",
+  title: "Mobile Dinners for Restaurants",
   description:
     "One system replaces your point of sale, your website, your marketing stack and your delivery apps. Restaurants keep 100% of every order.",
 };
@@ -42,11 +42,11 @@ const PLANES = [
 ];
 
 const REPLACES = [
-  { name: "Toast / Square", role: "Point of sale", cost: "$69–$165 / mo + hardware" },
-  { name: "Owner / BentoBox", role: "Website + ordering", cost: "$199–$499 / mo" },
-  { name: "Klaviyo / Attentive", role: "Email + SMS", cost: "$100–$500 / mo" },
-  { name: "Punchh / Thanx", role: "Loyalty", cost: "$150–$400 / mo" },
-  { name: "DoorDash / UberEats", role: "Marketplace demand", cost: "15–30% of every order" },
+  { name: "Toast / Square", role: "Point of sale", cost: "$69 to $165 / mo + hardware" },
+  { name: "Owner / BentoBox", role: "Website + ordering", cost: "$199 to $499 / mo" },
+  { name: "Klaviyo / Attentive", role: "Email + SMS", cost: "$100 to $500 / mo" },
+  { name: "Punchh / Thanx", role: "Loyalty", cost: "$150 to $400 / mo" },
+  { name: "DoorDash / UberEats", role: "Marketplace demand", cost: "15% to 30% of every order" },
   { name: "Spreadsheets", role: "Menu pricing, labor", cost: "Hours a week" },
 ];
 
@@ -220,7 +220,7 @@ export default function MarketingHome() {
             <SectionHead
               eyebrow="AI that shows its work"
               title="Every recommendation comes with the number behind it"
-              lede="The optimizer does not tell you to 'consider raising prices'. It tells you which item, to what price, what it expects to happen to volume, and how confident it is — then logs the decision so you can check it in three weeks."
+              lede="The optimizer does not tell you to 'consider raising prices'. It tells you which item, to what price, what it expects to happen to volume, and how confident it is, then logs the decision so you can check it in three weeks."
             />
             <Link
               href="/partners/features#ai"
@@ -248,15 +248,15 @@ export default function MarketingHome() {
                 <dt className="text-ink-3">Est. margin change</dt>
                 <dd className="num text-right font-bold text-green">+$412 / mo</dd>
                 <dt className="text-ink-3">95% interval</dt>
-                <dd className="num text-right font-bold">$180 – $640</dd>
+                <dd className="num text-right font-bold">$180 to $640</dd>
                 <dt className="text-ink-3">Elasticity prior</dt>
                 <dd className="num text-right font-bold">−0.85 (signature)</dd>
               </dl>
             </div>
             <p className="mt-3.5 text-[13px] leading-relaxed text-ink-3">
               Recommendations are logged with their inputs and the model version.
-              Three weeks later the dashboard shows what actually happened next to
-              what was predicted — including the times it was wrong.
+              Three weeks later the dashboard shows what actually happened next to what
+              was predicted, including the times it was wrong.
             </p>
           </Card>
         </div>
@@ -271,9 +271,9 @@ export default function MarketingHome() {
               Take orders in about an hour
             </h2>
             <p className="mt-3 text-[15px] leading-relaxed text-ink-2">
-              Sign up, add your menu, publish. Your storefront, your marketplace
-              listing and your kitchen display all come from the same menu — publish
-              once and every surface updates together.
+              Sign up, add your menu, publish. Your storefront, marketplace listing and
+              kitchen display all come from the same menu, so you publish once and every
+              surface updates together.
             </p>
             <Link href="/partners/signup" className="btn btn-primary mt-5 w-full">
               Create a restaurant account

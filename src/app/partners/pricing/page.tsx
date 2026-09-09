@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { CtaBand, Faq, PageHero, SectionHead, Wrap } from "@/components/marketing";
 
 export const metadata: Metadata = {
-  title: "Pricing — Mobile Dinners",
+  title: "Mobile Dinners Pricing for Restaurants",
   description:
     "Flat monthly pricing per location. 0% commission on every order, on every plan, forever. Processing billed at cost-plus.",
 };
@@ -49,7 +49,7 @@ const TIERS: Tier[] = [
   },
 ];
 
-/** Straight out of the business model — the site and the spec must not drift. */
+/** Straight out of the business model, so the site and the spec cannot drift. */
 const MATRIX: { row: string; cells: [string, string, string, string] }[] = [
   {
     row: "Commission on orders",
@@ -89,15 +89,15 @@ const MATRIX: { row: string; cells: [string, string, string, string] }[] = [
   },
   {
     row: "AI menu optimizer",
-    cells: ["—", "Yes", "Yes", "Yes"],
+    cells: ["No", "Yes", "Yes", "Yes"],
   },
   {
     row: "AI labor scheduling",
-    cells: ["—", "—", "Yes", "Yes"],
+    cells: ["No", "No", "Yes", "Yes"],
   },
   {
     row: "Offline gateway",
-    cells: ["—", "Yes", "Yes", "Redundant pair"],
+    cells: ["No", "Yes", "Yes", "Redundant pair"],
   },
   {
     row: "Accounting sync",
@@ -105,7 +105,7 @@ const MATRIX: { row: string; cells: [string, string, string, string] }[] = [
   },
   {
     row: "API access",
-    cells: ["—", "Read", "Read + write", "Full + webhooks"],
+    cells: ["No", "Read", "Read + write", "Full + webhooks"],
   },
   {
     row: "Support",
@@ -118,13 +118,13 @@ const HARDWARE = [
   { item: "Kitchen display", buy: "$399", lease: "$29 / mo" },
   { item: "Offline gateway", buy: "$299", lease: "$22 / mo" },
   { item: "Receipt printer", buy: "$229", lease: "$18 / mo" },
-  { item: "Card reader", buy: "$99", lease: "—" },
+  { item: "Card reader", buy: "$99", lease: "Not offered" },
 ];
 
 const FAQS = [
   {
     q: "Is 0% commission a promotional rate?",
-    a: "No. It is a term of the contract, not a launch offer. We make money on the subscription, the payment spread and optional add-ons — never on a percentage of an order. If we ever wanted to change that, it would require your written agreement to a new contract, and you could export everything and leave.",
+    a: "No. It is a term of the contract, not a launch offer. We make money on the subscription, the payment spread and optional add-ons, never on a percentage of an order. If we ever wanted to change that, it would require your written agreement to a new contract, and you could export everything and leave.",
   },
   {
     q: "What does card processing actually cost?",
@@ -136,7 +136,7 @@ const FAQS = [
   },
   {
     q: "Who pays the delivery fee?",
-    a: "The diner pays $0.99–$3.99 depending on distance, and you can choose to contribute a capped amount to lower it. You are never charged a percentage of the order for delivery, and you can turn delivery off and stay pickup-only at no cost.",
+    a: "The diner pays $0.99 to $3.99 depending on distance, and you can choose to contribute a capped amount to lower it. You are never charged a percentage of the order for delivery, and you can turn delivery off and stay pickup-only at no cost.",
   },
   {
     q: "What happens to my customer data if I leave?",
@@ -144,7 +144,7 @@ const FAQS = [
   },
   {
     q: "Is there a contract or a setup fee?",
-    a: "No setup fee. Annual billing is the published price; monthly billing is 20% higher. Cancel at any time — annual plans are refunded pro rata for the unused months.",
+    a: "No setup fee. Annual billing is the published price; monthly billing is 20% higher. Cancel at any time, and annual plans are refunded pro rata for the unused months.",
   },
   {
     q: "How long does it take to go live?",
@@ -158,7 +158,7 @@ export default function PricingPage() {
       <PageHero
         eyebrow="Pricing"
         title="Flat monthly. Zero per order."
-        lede="You pay for software, once a month, per location. You never pay a percentage of a ticket — not on marketplace orders, not on delivery, not ever. Billed annually; monthly billing is 20% higher."
+        lede="You pay for software, once a month, per location. You never pay a percentage of a ticket: not on marketplace orders, not on delivery, not ever. Billed annually; monthly billing is 20% higher."
       />
 
       {/* ------------------------------------------------------------ the tiers */}
@@ -203,7 +203,7 @@ export default function PricingPage() {
         <p className="mt-5 text-[13.5px] leading-relaxed text-ink-3">
           Card processing on every plan: <strong className="num font-bold text-ink-2">2.6% + 10¢</strong>{" "}
           card-present, <strong className="num font-bold text-ink-2">2.9% + 30¢</strong>{" "}
-          card-not-present. Interchange is itemised separately from our spread on
+          card-not-present. Interchange is itemized separately from our spread on
           every payout statement.
         </p>
       </Wrap>
@@ -249,7 +249,7 @@ export default function PricingPage() {
                     <td
                       key={i}
                       className={`py-3 pr-3 text-[13.5px] align-top ${
-                        c === "—"
+                        c === "No"
                           ? "text-ink-3"
                           : c === "0%"
                             ? "num font-extrabold text-green"
@@ -301,7 +301,7 @@ export default function PricingPage() {
                     ["Website + ordering", "−$3,588", "included"],
                     ["Email + SMS", "−$2,400", "included"],
                     ["Loyalty", "−$2,400", "included"],
-                    ["Mobile Dinners plan", "—", "−$3,588"],
+                    ["Mobile Dinners plan", "$0", "−$3,588"],
                     ["Card processing", "−$24,300", "−$24,300"],
                   ].map(([label, a, b]) => (
                     <tr key={label} className="border-b border-line">
@@ -323,7 +323,7 @@ export default function PricingPage() {
               </table>
               <p className="mt-4 text-[12.5px] leading-relaxed text-ink-3">
                 $450,000 of the sales go through a marketplace at 25%. Processing is
-                2.7% blended on both sides — it is not a difference, it is shown so
+                2.7% blended on both sides, so it is not a difference. It is shown so
                 the totals reconcile. Growth plan at $299 × 12.
               </p>
             </div>

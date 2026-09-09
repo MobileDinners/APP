@@ -8,7 +8,7 @@ import { CtaBand, Faq, PageHero, SectionHead, Stat, Wrap } from "@/components/ma
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Marketplace — Mobile Dinners",
+  title: "How Mobile Dinners Works",
   description:
     "Order from local restaurants at in-store prices. No service fees, no inflated menus, and one points wallet that works at every restaurant on the network.",
 };
@@ -16,11 +16,11 @@ export const metadata: Metadata = {
 const FAQS = [
   {
     q: "Why is the food cheaper here?",
-    a: "It usually is not cheaper — it is the actual price. Restaurants on other apps raise their menu prices to survive a 15–30% commission, so the same burrito quietly costs two dollars more there. We take nothing per order, so there is nothing to mark up.",
+    a: "It usually is not cheaper. It is the actual price. Restaurants on other apps raise their menu prices to survive a commission of 15% to 30%, so the same burrito quietly costs two dollars more there. We take nothing per order, so there is nothing to mark up.",
   },
   {
     q: "What do I pay on top of the food?",
-    a: "Tax, an optional tip, and — if you choose delivery — a delivery fee of $0.99–$3.99 worked out from how far your address is from the restaurant, shown in full at checkout before you pay. There is no service fee, no small-order fee, no busy-time surcharge and no separate 'regulatory response' line.",
+    a: "Tax, an optional tip and, if you choose delivery, a delivery fee of $0.99 to $3.99 worked out from how far your address is from the restaurant. It is shown in full at checkout before you pay. There is no service fee, no small-order fee, no busy-time surcharge and no separate 'regulatory response' line.",
   },
   {
     q: "How do the points work?",
@@ -32,7 +32,7 @@ const FAQS = [
   },
   {
     q: "Who gets my contact details?",
-    a: "The restaurant you ordered from. That is the point — they should be able to recognise a regular. We do not sell your data, and one restaurant never sees another restaurant's customers.",
+    a: "The restaurant you ordered from. That is the point: they should be able to recognize a regular. We do not sell your data, and one restaurant never sees another restaurant's customers.",
   },
 ];
 
@@ -54,7 +54,7 @@ export default function MarketplacePage() {
       <PageHero
         eyebrow="Marketplace"
         title="The delivery app that does not tax the kitchen"
-        lede="Same browse, same cart, same live tracking you already know. The difference is that the restaurant keeps the whole ticket — which is why the prices match the ones on the wall."
+        lede="Same browse, same cart, same live tracking you already know. The difference is that the restaurant keeps the whole ticket, which is why the prices match the ones on the wall."
       >
         <div className="flex flex-wrap gap-3">
           <Link
@@ -83,7 +83,7 @@ export default function MarketplacePage() {
             />
             <p className="mt-5 text-[14px] leading-relaxed text-ink-3">
               Menu markup is the amount restaurants add to third-party listings to
-              absorb commission — commonly 10–20%. It never appears as a line on
+              absorb commission, commonly 10% to 20%. It never appears as a line on
               your receipt, because it is baked into the item price. Tax is charged
               on the food, so the markup gets taxed too. Same food, same street,
               <strong className="num font-bold text-ink-2"> $13.75</strong> apart.
@@ -222,13 +222,13 @@ export default function MarketplacePage() {
             <SectionHead
               eyebrow="One wallet"
               title="Points from the taqueria buy the bakery"
-              lede="Most loyalty programmes trap you in one restaurant, so you end up with four cards and a stale balance at each. Here there is one balance, and it works everywhere on the network."
+              lede="Most loyalty programs trap you in one restaurant, so you end up with four cards and a stale balance at each. Here there is one balance, and it works everywhere on the network."
             />
             <ul className="m-0 mt-6 grid list-none gap-3 p-0">
               {[
                 "Earn on every order, pickup or delivery",
                 "Spend at any restaurant on Mobile Dinners",
-                "Restaurants set their own earn multipliers — some days are worth more",
+                "Restaurants set their own earn multipliers, so some days are worth more",
                 "Every point earned, spent and expired is a ledger entry you can see",
               ].map((b) => (
                 <li key={b} className="flex gap-2.5 text-[15px] leading-snug text-ink-2">

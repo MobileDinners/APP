@@ -4,7 +4,7 @@ import { CtaBand, Card, Faq, PageHero, SectionHead, Wrap } from "@/components/ma
 import { SUPPORT_PHONE } from "@/lib/platform";
 
 export const metadata: Metadata = {
-  title: "Support — Mobile Dinners",
+  title: "Mobile Dinners Partner Support",
   description:
     "Response targets by plan, an emergency line for kitchens that are down, self-serve guides and system status.",
 };
@@ -41,14 +41,14 @@ const CHANNELS = [
 ];
 
 const SLA = [
-  { plan: "Starter", first: "12 hours", channels: "Chat, email", hours: "7am–11pm local" },
-  { plan: "Growth", first: "4 hours", channels: "Chat, email, phone", hours: "7am–11pm local" },
+  { plan: "Starter", first: "12 hours", channels: "Chat, email", hours: "7am to 11pm local" },
+  { plan: "Growth", first: "4 hours", channels: "Chat, email, phone", hours: "7am to 11pm local" },
   { plan: "Scale", first: "1 hour", channels: "Priority chat, email, phone", hours: "24/7" },
   { plan: "Enterprise", first: "15 minutes", channels: "Named CSM + all channels", hours: "24/7, contractual SLA" },
 ];
 
 const GUIDES = [
-  { h: "Building your first menu", p: "Sections, items, food costs and prep times — and what publishing actually does.", href: "/partners/features#menu" },
+  { h: "Building your first menu", p: "Sections, items, food costs, prep times, and what publishing actually does.", href: "/partners/features#menu" },
   { h: "Connecting Square or Clover", p: "Import your catalog, map items and push orders back into your existing till.", href: "/partners/features#pos" },
   { h: "Going live on the marketplace", p: "What has to be true before your restaurant appears in the feed.", href: "/partners/features#marketplace" },
   { h: "Reading a campaign result", p: "Why the number is treated minus holdout, and what a wide interval is telling you.", href: "/partners/features#campaigns" },
@@ -59,11 +59,11 @@ const GUIDES = [
 const FAQS = [
   {
     q: "Something is broken mid-service. What do I do?",
-    a: "Call the kitchen-down line. It is answered by a person around the clock on every plan, including Starter — a restaurant that cannot take money is not a support ticket, it is an outage. If the failure is on our side, the offline gateway should already be holding orders locally and will replay them when the connection returns.",
+    a: "Call the kitchen-down line. It is answered by a person around the clock on every plan, including Starter. A restaurant that cannot take money is not a support ticket, it is an outage. If the failure is on our side, the offline gateway should already be holding orders locally and will replay them when the connection returns.",
   },
   {
     q: "Can you help me move my menu over?",
-    a: "Yes. Send a photo of the printed menu or an export from your current system and onboarding will build the draft with you on the call. You review prices before anything publishes — we will not guess at a price.",
+    a: "Yes. Send a photo of the printed menu or an export from your current system and onboarding will build the draft with you on the call. You review prices before anything publishes, because we will not guess at a price.",
   },
   {
     q: "Do you charge for onboarding or training?",
@@ -71,7 +71,7 @@ const FAQS = [
   },
   {
     q: "What counts as an emergency versus a normal ticket?",
-    a: "Emergency: orders not reaching the kitchen, payments failing, terminal or display down, marketplace listing dark during service. Normal: campaign questions, reporting, menu edits, billing, feature requests. When in doubt during service, call — nobody will be annoyed.",
+    a: "Emergency: orders not reaching the kitchen, payments failing, terminal or display down, marketplace listing dark during service. Normal: campaign questions, reporting, menu edits, billing, feature requests. When in doubt during service, call. Nobody will be annoyed.",
   },
   {
     q: "Where do I see whether it is you or my internet?",
@@ -143,7 +143,7 @@ export default function SupportPage() {
           <SectionHead
             eyebrow="Response targets"
             title="First human response, by plan"
-            lede="These are targets for the first reply from a person, not an auto-acknowledgement. The kitchen-down line is outside this table — it is answered on every plan, at any hour."
+            lede="These are targets for the first reply from a person, not an auto-acknowledgement. The kitchen-down line is outside this table, because it is answered on every plan, at any hour."
           />
           <div className="mt-8 overflow-x-auto">
             <table className="w-full min-w-[620px] border-collapse text-left">

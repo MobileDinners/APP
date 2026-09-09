@@ -133,7 +133,7 @@ export function RefundButton({
 
       <p className="mt-2 text-[12.5px] leading-relaxed text-ink-3">
         Up to {formatCents(remainingCents)} can be refunded. The restaurant keeps its
-        share — Mobile Dinners absorbs this.
+        share, because Mobile Dinners absorbs this.
       </p>
 
       {error && (

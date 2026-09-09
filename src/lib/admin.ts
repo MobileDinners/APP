@@ -106,7 +106,7 @@ export function overview(): Overview {
 export function deliverySuccess(): Metric<{ delivered: number; attempted: number; rate: number }> {
   const attempted = count("SELECT COUNT(*) AS n FROM deliveries");
   if (attempted === 0) {
-    return missing("No courier has ever been booked — DoorDash Drive is not connected.");
+    return missing("No courier has ever been booked. DoorDash Drive is not connected.");
   }
   const delivered = count("SELECT COUNT(*) AS n FROM deliveries WHERE status = 'delivered'");
   return ok({ delivered, attempted, rate: delivered / attempted });
@@ -432,7 +432,7 @@ export function deliveryWebhookLog(limit = 100) {
  * Delivery fee economics.
  *
  * guest_fee is what the diner paid; courier_fee is what the network charged
- * us. The difference is the platform's exposure — negative means we subsidised
+ * us. The difference is the platform's exposure — negative means we subsidized
  * the trip, which is fine deliberately and alarming by accident.
  */
 export function deliveryEconomics(): Metric<{
@@ -440,10 +440,10 @@ export function deliveryEconomics(): Metric<{
   guestCents: number;
   courierCents: number;
   marginCents: number;
-  subsidised: number;
+  subsidized: number;
 }> {
   const n = count("SELECT COUNT(*) AS n FROM deliveries");
-  if (n === 0) return missing("No deliveries yet — DoorDash Drive is not connected.");
+  if (n === 0) return missing("No deliveries yet. DoorDash Drive is not connected.");
   const r = db()
     .prepare(
       `SELECT COALESCE(SUM(guest_fee_cents),0)   AS guest,
@@ -457,7 +457,7 @@ export function deliveryEconomics(): Metric<{
     guestCents: r.guest,
     courierCents: r.courier,
     marginCents: r.guest - r.courier,
-    subsidised: r.sub,
+    subsidized: r.sub,
   });
 }
 
@@ -589,7 +589,7 @@ export function paymentsSummary(): Metric<{
 }> {
   const n = count("SELECT COUNT(*) AS n FROM payments");
   if (n === 0) {
-    return missing("No card payment has been taken — Stripe is not connected.");
+    return missing("No card payment has been taken. Stripe is not connected.");
   }
   const r = db()
     .prepare(
@@ -663,10 +663,10 @@ export function integrationStatus(): IntegrationStatus[] {
     { key: "MD_TOKEN_KEY", label: "POS token sealing key", configured: has("MD_TOKEN_KEY"), detail: mode("MD_TOKEN_KEY") },
     { key: "TWILIO_ACCOUNT_SID", label: "Twilio (SMS)", configured: has("TWILIO_ACCOUNT_SID"), detail: mode("TWILIO_ACCOUNT_SID") },
     { key: "RESEND_API_KEY", label: "Resend (email)", configured: has("RESEND_API_KEY"), detail: mode("RESEND_API_KEY") },
-    { key: "NEXT_PUBLIC_MAPTILER_KEY", label: "Map tiles (MapTiler)", configured: has("NEXT_PUBLIC_MAPTILER_KEY"), detail: has("NEXT_PUBLIC_MAPTILER_KEY") ? "set — public by design, restrict it by origin" : "not set — tracking shows an illustrative route" },
-    { key: "GEOCODE_API_KEY", label: "Geocoding (OpenCage)", configured: has("GEOCODE_API_KEY") || has("OPENCAGE_API_KEY") || has("MAPS_API_KEY"), detail: has("GEOCODE_API_KEY") ? mode("GEOCODE_API_KEY") : has("OPENCAGE_API_KEY") ? "set as OPENCAGE_API_KEY" : has("MAPS_API_KEY") ? "set as MAPS_API_KEY" : "not set — delivery fees fall back to a flat rate" },
-    { key: "MD_DATA_DIR", label: "Persistent disk", configured: has("MD_DATA_DIR"), detail: has("MD_DATA_DIR") ? process.env.MD_DATA_DIR! : "EPHEMERAL — data is lost on restart" },
-    { key: "MD_ADMIN_EMAILS", label: "Admin allowlist", configured: has("MD_ADMIN_EMAILS"), detail: has("MD_ADMIN_EMAILS") ? `${process.env.MD_ADMIN_EMAILS!.split(",").length} admin(s)` : "not set — nobody can administer in production" },
+    { key: "NEXT_PUBLIC_MAPTILER_KEY", label: "Map tiles (MapTiler)", configured: has("NEXT_PUBLIC_MAPTILER_KEY"), detail: has("NEXT_PUBLIC_MAPTILER_KEY") ? "set: public by design, restrict it by origin" : "not set: tracking shows an illustrative route" },
+    { key: "GEOCODE_API_KEY", label: "Geocoding (OpenCage)", configured: has("GEOCODE_API_KEY") || has("OPENCAGE_API_KEY") || has("MAPS_API_KEY"), detail: has("GEOCODE_API_KEY") ? mode("GEOCODE_API_KEY") : has("OPENCAGE_API_KEY") ? "set as OPENCAGE_API_KEY" : has("MAPS_API_KEY") ? "set as MAPS_API_KEY" : "not set: delivery fees fall back to a flat rate" },
+    { key: "MD_DATA_DIR", label: "Persistent disk", configured: has("MD_DATA_DIR"), detail: has("MD_DATA_DIR") ? process.env.MD_DATA_DIR! : "EPHEMERAL: data is lost on restart" },
+    { key: "MD_ADMIN_EMAILS", label: "Admin allowlist", configured: has("MD_ADMIN_EMAILS"), detail: has("MD_ADMIN_EMAILS") ? `${process.env.MD_ADMIN_EMAILS!.split(",").length} admin(s)` : "not set: nobody can administer in production" },
     { key: "MD_OTP_TEST_NUMBERS", label: "Pinned test numbers", configured: has("MD_OTP_TEST_NUMBERS"), detail: has("MD_OTP_TEST_NUMBERS") ? `${process.env.MD_OTP_TEST_NUMBERS!.split(",").length} number(s)` : "not set" },
   ];
 }

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { LegalPage } from "@/components/marketing";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Mobile Dinners",
+  title: "Mobile Dinners Privacy Policy",
   description:
     "What we collect, why, who sees it, and how a restaurant or a diner gets their data out. Written to be read.",
 };
@@ -35,7 +35,7 @@ export default function PrivacyPage() {
                   restaurant&rsquo;s customer list is never used to market another.
                 </li>
                 <li>
-                  <strong>We never store card numbers.</strong> Payments are tokenised
+                  <strong>We never store card numbers.</strong> Payments are tokenized
                   by the processor; no card number reaches our database.
                 </li>
                 <li>
@@ -58,7 +58,7 @@ export default function PrivacyPage() {
               </p>
               <p>
                 <strong>Because you placed an order:</strong> what you ordered, from
-                where, when, the amount, the fulfilment method, tips, and points
+                where, when, the amount, the fulfillment method, tips, and points
                 earned or redeemed.
               </p>
               <p>
@@ -81,9 +81,8 @@ export default function PrivacyPage() {
             <>
               <p>
                 Business details (name, address, cuisine, hours), menu content and
-                pricing, staff accounts, order and payout history, campaign
-                performance, and — where connected — data imported from a Square or
-                Clover account you authorise.
+                pricing, staff accounts, order and payout history, campaign performance, and, where connected, data imported from a Square
+                or Clover account you authorize.
               </p>
               <p>
                 POS access tokens are encrypted at rest with AES-256-GCM. The
@@ -102,8 +101,8 @@ export default function PrivacyPage() {
                 <li>To take, route, cook, deliver and track orders.</li>
                 <li>To run the loyalty wallet and calculate points across restaurants.</li>
                 <li>
-                  To send transactional messages — order confirmations, ready
-                  notifications, delivery updates. These are not marketing and cannot
+                  To send transactional messages such as order confirmations, ready
+                  notifications and delivery updates. These are not marketing and cannot
                   be turned off while an order is live.
                 </li>
                 <li>
@@ -119,7 +118,7 @@ export default function PrivacyPage() {
                 </li>
                 <li>To detect and prevent fraud, abuse and payment disputes.</li>
                 <li>
-                  To produce aggregate analytics — never in a form that identifies an
+                  To produce aggregate analytics, never in a form that identifies an
                   individual diner to anyone but the restaurant they ordered from.
                 </li>
               </ul>
@@ -132,8 +131,7 @@ export default function PrivacyPage() {
           body: (
             <>
               <p>
-                <strong>The restaurant you ordered from.</strong> Your name, phone,
-                the order, and — for delivery — the address. They may contact you
+                <strong>The restaurant you ordered from.</strong> Your name, phone number, the order and, for delivery, the address. They may contact you
                 about that order and, subject to consent rules, market to you later.
               </p>
               <p>
@@ -148,10 +146,10 @@ export default function PrivacyPage() {
                 provide that service.
               </p>
               <p>
-                <strong>Nobody else</strong> — except where we are legally required to
-                disclose, or where it is necessary to investigate fraud or a threat to
-                someone&rsquo;s safety. We do not sell data and we do not share it for
-                cross-context behavioural advertising.
+                <strong>Nobody else.</strong> The exceptions are where we are legally
+                required to disclose, or where it is necessary to investigate fraud or a
+                threat to someone&rsquo;s safety. We do not sell data and we do not
+                share it for cross-context behavioral advertising.
               </p>
             </>
           ),
@@ -162,9 +160,8 @@ export default function PrivacyPage() {
           body: (
             <>
               <p>
-                <strong>Restaurants own their business data</strong> — customer
-                profiles built from their own orders, order history, menu versions,
-                campaign results and analytics. Export it as CSV from the dashboard at
+                <strong>Restaurants own their business data</strong> This covers customer profiles built from their own orders, order
+                history, menu versions, campaign results and analytics. Export it as CSV from the dashboard at
                 any time, or over the API on Growth and above. Nothing about leaving
                 requires our permission or a phone call.
               </p>
@@ -244,10 +241,9 @@ export default function PrivacyPage() {
                 Passwords are hashed with scrypt and never stored in a reversible
                 form. Session tokens are stored as SHA-256 hashes and compared in
                 constant time. Third-party access tokens are sealed with AES-256-GCM.
-                Every query is scoped to the tenant on the session — never to an
-                identifier supplied in a URL — and asking for another
-                restaurant&rsquo;s record returns the same answer as asking for one
-                that does not exist.
+                Every query is scoped to the tenant on the session, never to an
+                identifier supplied in a URL. Asking for another restaurant&rsquo;s
+                record returns the same answer as asking for one that does not exist.
               </p>
               <p>
                 No system is perfect. If we discover a breach affecting your personal

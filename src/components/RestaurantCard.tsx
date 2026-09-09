@@ -79,7 +79,7 @@ export function RestaurantCard({
         <p className="num mt-1 text-[14px] text-ink-2">
           {mode === "pickup" ? "Pickup" : `${formatCents(r.deliveryFeeCents)} delivery`}
           {" · "}
-          {low}–{high} min
+          {low} to {high} min
         </p>
 
         <p className="mt-0.5 truncate text-[13px] text-ink-3">

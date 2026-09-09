@@ -63,7 +63,7 @@ export default async function MerchantDetail({
         <Stat
           label="Contributes to MRR"
           value={m.mrrCents ? formatCents(m.mrrCents) : "—"}
-          sub={m.subStatus === "trialing" ? "trial — not counted" : undefined}
+          sub={m.subStatus === "trialing" ? "trial, not counted" : undefined}
         />
         <Stat label="Orders" value={m.orders.toLocaleString()} />
         <Stat label="GMV" value={formatCents(m.gmvCents)} sub="completed orders only" />
@@ -200,7 +200,7 @@ export default async function MerchantDetail({
             {invoices.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-3 py-8 text-center text-[13.5px] text-ink-3">
-                  No invoices — this restaurant has never been billed.
+                  No invoices. This restaurant has never been billed.
                 </td>
               </tr>
             ) : (
@@ -251,7 +251,7 @@ export default async function MerchantDetail({
               <Th>Order</Th>
               <Th>Placed</Th>
               <Th>State</Th>
-              <Th>Fulfilment</Th>
+              <Th>Fulfillment</Th>
               <Th right>Total</Th>
             </tr>
           </thead>

@@ -74,7 +74,7 @@ export default async function RestaurantsPage({
         <CategoryTiles />
       </div>
 
-      {/* Fulfilment first: it changes prices and times, so it comes before
+      {/* Fulfillment first: it changes prices and times, so it comes before
           anything a person might compare. */}
       <div className="mt-5 border-b border-line">
         <div className="flex items-center justify-between gap-4 px-4 pb-4 md:px-6">
@@ -189,8 +189,8 @@ export default async function RestaurantsPage({
               <>
                 <p className="text-[17px] font-extrabold">No restaurants yet</p>
                 <p className="mx-auto mt-2 max-w-[44ch] text-[14.5px] text-ink-2">
-                  We are signing up kitchens in your area now. Check back shortly —
-                  or tell your favourite restaurant about us.
+                  We are signing up kitchens in your area now. Check back shortly, or
+                  tell your favorite restaurant about us.
                 </p>
                 <Link href="/partners" className="btn btn-secondary mt-5">
                   I run a restaurant
@@ -200,7 +200,7 @@ export default async function RestaurantsPage({
               <>
                 <p className="text-[17px] font-extrabold">Nothing matches those filters</p>
                 <p className="mx-auto mt-2 max-w-[44ch] text-[14.5px] text-ink-2">
-                  Try removing one — there are {all.length} restaurants open right now.
+                  Try removing one. There are {all.length} restaurants open right now.
                 </p>
                 <Link href="/restaurants" className="btn btn-secondary mt-5">
                   Clear filters

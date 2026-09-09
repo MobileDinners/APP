@@ -4,7 +4,7 @@ import { listAllOrders, listMerchants, orderStateCounts, posPushHealth } from "@
 import { Chip, Panel, Stat, TableWrap, Td, Th, shortDate } from "@/components/admin/AdminUI";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Orders — Admin" };
+export const metadata = { title: "Admin Orders" };
 
 const PAGE = 50;
 
