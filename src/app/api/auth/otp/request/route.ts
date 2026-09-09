@@ -19,15 +19,14 @@ export async function POST(req: Request) {
 
   const result = await issueOtp(phone);
   if (!result.ok) {
-    // Two different failures used to share a 429. Being throttled is the
-    // caller's doing and retrying soon will work; a carrier or provider
-    // failure is ours, and a client that backs off politely on a 429 would
-    // wait for a code that is never coming. 502 says "not your fault".
-    const throttled = result.error.startsWith("Too many");
-    return NextResponse.json(
-      { error: result.error, code: throttled ? "rate_limited" : "send_failed" },
-      { status: throttled ? 429 : 502 },
-    );
+    // Three failures, three answers. Being throttled is the caller's doing and
+    // retrying shortly will work, so 429. A carrier or provider failure is
+    // ours and may clear, so 502. No provider configured at all will never
+    // clear on its own, so 503 — and a client that backs off politely on a 429
+    // would otherwise sit there waiting for a code that cannot be sent.
+    const status =
+      result.reason === "rate_limited" ? 429 : result.reason === "sms_unavailable" ? 503 : 502;
+    return NextResponse.json({ error: result.error, code: result.reason }, { status });
   }
 
   // devCode is only ever populated outside production — see issueOtp.

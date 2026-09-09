@@ -208,7 +208,22 @@ export function can(role: Role, action: "advance_order" | "edit_menu" | "publish
 
 /* ---------------------------- customer OTP ---------------------------- */
 
-export type OtpIssue = { ok: true; devCode?: string } | { ok: false; error: string };
+/**
+ * Why a failure carries a machine-readable reason as well as a message.
+ *
+ * These three fail in genuinely different ways and the caller has to act
+ * differently on each: being throttled is the caller's own doing and retrying
+ * shortly will work, a provider failure is ours and retrying might work, and
+ * an unconfigured provider will NEVER work no matter how long anyone waits —
+ * that one has to send the customer somewhere else entirely. Sniffing the
+ * message text to tell them apart, which is what this used to do, breaks the
+ * moment the wording changes.
+ */
+export type OtpFailure = "rate_limited" | "sms_unavailable" | "send_failed";
+
+export type OtpIssue =
+  | { ok: true; devCode?: string }
+  | { ok: false; error: string; reason: OtpFailure };
 
 /**
  * Test numbers, for staging a live site before an SMS provider exists.
@@ -253,7 +268,11 @@ export async function issueOtp(phone: string): Promise<OtpIssue> {
     )
     .get(phone, new Date(Date.now() - OTP_RATE_WINDOW_MS).toISOString()) as { n: number };
   if (recent.n >= OTP_RATE_MAX) {
-    return { ok: false, error: "Too many codes requested. Wait a minute and try again." };
+    return {
+      ok: false,
+      error: "Too many codes requested. Wait a minute and try again.",
+      reason: "rate_limited",
+    };
   }
 
   const code = testCodeFor(phone) ?? String(randomInt(0, 1_000_000)).padStart(6, "0");
@@ -274,14 +293,37 @@ export async function issueOtp(phone: string): Promise<OtpIssue> {
   // the entire point of pinning it.
   const pinned = testCodeFor(phone) !== null;
 
-  if (!pinned && smsConfigured()) {
-    const sent = await sendSms(phone, otpMessage(code));
-    if (!sent.ok) {
-      // The row stays: it expires on its own, and deleting it here would let
-      // an attacker clear their own rate-limit history by forcing failures.
-      // Say plainly that nothing was sent, so nobody waits for a text that is
-      // never coming.
-      return { ok: false, error: "We could not send your code. Try again in a moment." };
+  if (!pinned) {
+    if (!smsConfigured()) {
+      // No provider, so nothing was sent and nothing ever will be. This used
+      // to fall through and report success, which is the worst of the options
+      // available: the customer sits on the code screen waiting for a text
+      // that does not exist, and the deployment looks healthy from the
+      // outside because every request returns 200.
+      //
+      // Outside production the code is handed back below instead, so local
+      // development and the test suite keep working without a carrier.
+      if (process.env.NODE_ENV === "production") {
+        return {
+          ok: false,
+          error:
+            "We cannot text a code right now. Sign in with your email and password instead.",
+          reason: "sms_unavailable",
+        };
+      }
+    } else {
+      const sent = await sendSms(phone, otpMessage(code));
+      if (!sent.ok) {
+        // The row stays: it expires on its own, and deleting it here would let
+        // an attacker clear their own rate-limit history by forcing failures.
+        // Say plainly that nothing was sent, so nobody waits for a text that is
+        // never coming.
+        return {
+          ok: false,
+          error: "We could not send your code. Try again in a moment.",
+          reason: "send_failed",
+        };
+      }
     }
   }
 

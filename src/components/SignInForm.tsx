@@ -42,6 +42,10 @@ export function SignInForm({
   const [marketing, setMarketing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Set when the server says texting is impossible rather than merely failing.
+  // An error alone leaves the customer re-tapping a button that cannot work;
+  // this puts the route that does work directly under their thumb.
+  const [smsDown, setSmsDown] = useState(false);
 
   function go() {
     router.push(next);
@@ -57,12 +61,14 @@ export function SignInForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ phone }),
     });
-    const data = (await res.json()) as { error?: string; devCode?: string };
+    const data = (await res.json()) as { error?: string; devCode?: string; code?: string };
     setBusy(false);
     if (!res.ok) {
       setError(data.error ?? "Could not send a code");
+      setSmsDown(data.code === "sms_unavailable");
       return;
     }
+    setSmsDown(false);
     setDevCode(data.devCode ?? null);
     setCode(data.devCode ?? "");
     setMode("code");
@@ -141,7 +147,11 @@ export function SignInForm({
 
   const lede =
     mode === "phone"
-      ? "We'll text you a code. No password to remember."
+      ? smsDown
+        ? // Promising a text directly above an error saying we cannot send one
+          // is the same dishonesty this change exists to remove.
+          "Texting is unavailable right now — your email and password still work."
+        : "We'll text you a code. No password to remember."
       : mode === "code"
         ? `Sent to ${phone}`
         : mode === "email"
@@ -190,9 +200,23 @@ export function SignInForm({
             className={INPUT}
           />
           {error && <ErrorNote>{error}</ErrorNote>}
-          <button type="submit" disabled={busy} className="btn btn-primary w-full">
-            {busy ? "Sending…" : "Send code"}
-          </button>
+          {smsDown ? (
+            <button
+              type="button"
+              autoFocus
+              onClick={() => {
+                setMode("email");
+                setError(null);
+              }}
+              className="btn btn-primary w-full"
+            >
+              Sign in with email
+            </button>
+          ) : (
+            <button type="submit" disabled={busy} className="btn btn-primary w-full">
+              {busy ? "Sending…" : "Send code"}
+            </button>
+          )}
         </form>
       )}
 

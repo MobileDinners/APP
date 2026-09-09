@@ -19,9 +19,22 @@ const nextConfig: NextConfig = {
    * Unset — which is the case on Render — this is exactly the default.
    */
   distDir: process.env.MD_DIST_DIR || ".next",
-  // Emits a self-contained server bundle so the container does not need
-  // node_modules or the Next CLI at runtime.
-  output: "standalone",
+  /**
+   * No `output: "standalone"`.
+   *
+   * It was set to emit a self-contained server bundle, but the service starts
+   * with `npm start` — that is, `next start` — and Next warns on every boot
+   * that the two do not go together:
+   *
+   *   ⚠ "next start" does not work with "output: standalone" configuration.
+   *
+   * So the standalone bundle was built, uploaded and then never executed, on
+   * every single deploy. Switching the start command to run the bundle would
+   * also work, but it means hand-copying `public/` and the static chunks into
+   * `.next/standalone` in the build step, and getting that subtly wrong ships
+   * a site with no CSS. `next start` on Render is not the bottleneck; the
+   * wasted build is. Dropping the flag is the cheaper correct answer.
+   */
   // The floating dev badge sits on top of the bottom tab bar; hide it so the
   // consumer app can be demoed and screenshotted as it will actually ship.
   devIndicators: false,

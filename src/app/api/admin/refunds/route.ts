@@ -21,11 +21,27 @@ export const runtime = "nodejs";
  * pocket for a refund they did not authorise. That also means this endpoint
  * spends OUR money, which is why it is logged with who called it.
  */
-async function authorise(orderId: string) {
+/**
+ * Is this anybody at all? Called before the request body is even parsed.
+ *
+ * Authorisation used to run after input validation, so an anonymous caller
+ * posting an empty body got a 400 telling them which field was missing. No
+ * data leaked and no refund was reachable, but an endpoint that spends the
+ * platform's money should not answer questions for strangers at all — the
+ * first thing it does is establish who is asking.
+ */
+async function requireStaff() {
   const session = await getSession();
   if (session?.kind !== "staff") {
     return { error: NextResponse.json({ error: "Staff sign-in required" }, { status: 401 }) };
   }
+  return { session };
+}
+
+async function authorise(orderId: string) {
+  const gate = await requireStaff();
+  if (gate.error) return { error: gate.error };
+  const session = gate.session;
 
   const order = getOrder(orderId);
   if (!order) {
@@ -54,6 +70,9 @@ async function authorise(orderId: string) {
 
 /** What can be refunded, so the UI never offers a button that will fail. */
 export async function GET(req: Request) {
+  const staff = await requireStaff();
+  if (staff.error) return staff.error;
+
   const orderId = new URL(req.url).searchParams.get("orderId") ?? "";
   if (!orderId) {
     return NextResponse.json({ error: "orderId is required" }, { status: 400 });
@@ -65,6 +84,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  // Who is asking, before anything they sent is even read.
+  const staff = await requireStaff();
+  if (staff.error) return staff.error;
+
   let body: { orderId?: string; amountCents?: unknown; reason?: string };
   try {
     body = await req.json();

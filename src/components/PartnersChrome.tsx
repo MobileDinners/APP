@@ -206,11 +206,19 @@ function PartnersFooter() {
           ))}
         </div>
 
+        {/*
+          There was a "Demo environment — all restaurants, orders and metrics on
+          this build are generated fixtures" line here. It was true while this
+          was a prototype and is not any more, and it was the first thing a
+          restaurant owner read before reaching the pricing page. Telling a
+          prospect the product is not real is an expensive way to be modest.
+        */}
         <div className="mt-10 flex flex-col gap-2 border-t border-line pt-6 text-[13px] text-ink-3 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {new Date().getFullYear()} Mobile Dinners, Inc. San Francisco, CA.</p>
+          <p>© {new Date().getFullYear()} Mobile Dinners, Inc.</p>
           <p>
-            Demo environment — all restaurants, orders and metrics on this build are
-            generated fixtures.
+            <a href="/partners/support" className="hover:text-ink hover:underline">
+              Talk to us
+            </a>
           </p>
         </div>
       </div>
