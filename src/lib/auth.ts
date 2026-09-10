@@ -27,6 +27,33 @@ export { hashPassword, verifyPassword };
 const SESSION_COOKIE = "md_session";
 const PERSON_TTL_DAYS = 90;
 const STAFF_TTL_HOURS = 12;
+
+/**
+ * How long a staff session may sit untouched before it is finished.
+ *
+ * The session cookie already dies when the browser closes, which handles the
+ * ordinary case. It does not handle the browsers that put it back: Chrome's
+ * "continue where you left off", and the phone browsers that never really
+ * quit. On those, closing the laptop at the end of a shift and opening it the
+ * next morning restores the cookie and the previous person is still signed in
+ * — which is the exact thing this was meant to stop.
+ *
+ * `last_seen_at` is refreshed on every authenticated request, so a session
+ * that has not been touched for this long belongs to a browser that was shut,
+ * asleep or abandoned. It is not a session anybody is using.
+ *
+ * Deliberately staff only. A diner being signed out of their own phone while
+ * they decide what to eat is an annoyance with no security benefit, since
+ * nobody shares a phone the way a kitchen shares a terminal.
+ *
+ * MD_STAFF_IDLE_MINUTES tunes it without a deploy; 0 turns it off. Thirty
+ * minutes is the default because it is longer than any gap in service and
+ * shorter than a break.
+ */
+const STAFF_IDLE_MINUTES = (() => {
+  const raw = Number(process.env.MD_STAFF_IDLE_MINUTES);
+  return Number.isFinite(raw) && raw >= 0 ? raw : 30;
+})();
 const OTP_TTL_MINUTES = 10;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_RATE_WINDOW_MS = 60_000;
@@ -115,6 +142,37 @@ export async function setSessionCookie(token: string): Promise<void> {
   });
 }
 
+/**
+ * The raw session token, for callers that outlive a single request.
+ *
+ * Reading cookies is only possible inside a request, so anything long-lived —
+ * the event stream, in practice — has to capture the token while it still can.
+ */
+export async function currentSessionToken(): Promise<string | null> {
+  const jar = await cookies();
+  return jar.get(SESSION_COOKIE)?.value ?? null;
+}
+
+/**
+ * Mark a session as still in use, without loading it.
+ *
+ * The kitchen display is the reason this exists. It holds one long-lived
+ * EventSource and only asks the server for anything when an order actually
+ * moves, so a wall-mounted screen through a quiet hour makes no requests at
+ * all — and the idle timeout above would sign it out mid-service, which is
+ * both wrong and the fastest way to have staff demand the timeout be removed.
+ *
+ * A held-open stream IS someone using the terminal, so its heartbeat counts as
+ * activity. This does not weaken the timeout for the case it was added for: a
+ * browser that has been closed holds no stream, sends no heartbeat, and its
+ * restored cookie still ages out.
+ */
+export function touchSession(token: string): void {
+  getDb()
+    .prepare("UPDATE sessions SET last_seen_at = ? WHERE token_hash = ?")
+    .run(new Date().toISOString(), sha256(token));
+}
+
 export async function clearSessionCookie(): Promise<void> {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
@@ -140,6 +198,7 @@ export async function getSession(): Promise<Session | null> {
         subject_id: string;
         org_id: string | null;
         expires_at: string;
+        last_seen_at: string;
       }
     | undefined;
 
@@ -147,6 +206,18 @@ export async function getSession(): Promise<Session | null> {
   if (new Date(row.expires_at).getTime() < Date.now()) {
     db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(row.token_hash);
     return null;
+  }
+
+  // A staff session nobody has touched recently is a terminal somebody walked
+  // away from, or a browser that was closed and has since restored the cookie.
+  // The row is deleted rather than merely ignored, so the same token cannot be
+  // revived by a later request.
+  if (row.subject_type === "staff" && STAFF_IDLE_MINUTES > 0) {
+    const idleMs = Date.now() - new Date(row.last_seen_at).getTime();
+    if (idleMs > STAFF_IDLE_MINUTES * 60_000) {
+      db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(row.token_hash);
+      return null;
+    }
   }
 
   db.prepare("UPDATE sessions SET last_seen_at = ? WHERE token_hash = ?")

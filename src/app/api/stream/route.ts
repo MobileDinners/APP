@@ -1,5 +1,5 @@
 import { subscribe } from "@/lib/events";
-import { getSession } from "@/lib/auth";
+import { currentSessionToken, getSession, touchSession } from "@/lib/auth";
 import { getOrder } from "@/lib/orders";
 import type { BusEvent } from "@/lib/types";
 
@@ -16,6 +16,8 @@ export const runtime = "nodejs";
  */
 export async function GET(req: Request) {
   const session = await getSession();
+  // Captured now: cookies are unreadable once the stream outlives the request.
+  const sessionToken = await currentSessionToken();
 
   const url = new URL(req.url);
   const requestedOrder = url.searchParams.get("orderId");
@@ -79,7 +81,14 @@ export async function GET(req: Request) {
         if (orderScope && event.orderId === orderScope) emit(event);
       });
 
-      heartbeat = setInterval(() => send(`: ping\n\n`), 20_000);
+      heartbeat = setInterval(() => {
+        send(`: ping\n\n`);
+        // A held-open stream is a terminal somebody is watching, so it counts
+        // as activity against the staff idle timeout. Without this a kitchen
+        // display signs itself out during a quiet hour, because it only asks
+        // the server for anything when an order actually moves.
+        if (sessionToken) touchSession(sessionToken);
+      }, 20_000);
 
       req.signal.addEventListener("abort", () => {
         unsubscribe?.();
