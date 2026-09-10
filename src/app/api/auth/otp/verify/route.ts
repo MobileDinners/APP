@@ -38,6 +38,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: result.error }, { status: 401 });
   }
 
-  await setSessionCookie(result.token, result.ttlMs);
+  await setSessionCookie(result.token);
   return NextResponse.json({ ok: true, isNew: result.isNew });
 }

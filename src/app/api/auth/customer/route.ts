@@ -49,7 +49,7 @@ export async function POST(req: Request) {
     // Signed in immediately. A signup that ends at a login form loses people
     // who have just proved who they are.
     const token = createSessionFor(account.personId, PERSON_TTL_MS);
-    await setSessionCookie(token, PERSON_TTL_MS);
+    await setSessionCookie(token);
 
     return NextResponse.json({ ok: true, account }, { status: 201 });
   } catch (err) {
@@ -102,7 +102,7 @@ export async function PUT(req: Request) {
   resetLimit(`customer-login-acct:${email}`);
 
   const token = createSessionFor(result.personId, PERSON_TTL_MS);
-  await setSessionCookie(token, PERSON_TTL_MS);
+  await setSessionCookie(token);
 
   return NextResponse.json({ ok: true, displayName: result.displayName });
 }

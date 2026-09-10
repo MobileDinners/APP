@@ -87,14 +87,31 @@ function createSession(
   return token;
 }
 
-export async function setSessionCookie(token: string, ttlMs: number): Promise<void> {
+/**
+ * A SESSION cookie: no Max-Age and no Expires, so the browser drops it when it
+ * closes and the next person to open it starts signed out.
+ *
+ * It used to carry Max-Age, which made it persistent — a staff member who shut
+ * the browser stayed signed in for twelve hours, so whoever opened it next was
+ * working as them. On a terminal that several people share across a shift that
+ * is not a convenience, it is an unattributable till. Diners had the same thing
+ * for ninety days, on devices that get handed around.
+ *
+ * This no longer takes a lifetime, and that is the point. The session row in
+ * the database still expires — PERSON_TTL_DAYS and STAFF_TTL_HOURS bound it in
+ * createSession — so the cookie decides when the BROWSER forgets the token and
+ * the row decides when the SERVER stops honouring it. Handing a duration to
+ * this function again would only be useful for putting Max-Age back.
+ */
+export async function setSessionCookie(token: string): Promise<void> {
   const jar = await cookies();
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
     path: "/",
-    maxAge: Math.floor(ttlMs / 1000),
+    // Intentionally no maxAge. See above; adding one back makes the cookie
+    // persistent again and undoes the whole point of this.
   });
 }
 

@@ -49,6 +49,6 @@ export async function POST(req: Request) {
   resetLimit(`login:ip:${ip}`);
   resetLimit(`login:acct:${account}`);
 
-  await setSessionCookie(result.token, result.ttlMs);
+  await setSessionCookie(result.token);
   return NextResponse.json({ ok: true });
 }

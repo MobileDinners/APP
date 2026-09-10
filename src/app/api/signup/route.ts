@@ -80,7 +80,7 @@ export async function POST(req: Request) {
     });
 
     const login = loginStaff(email, password);
-    if (login.ok) await setSessionCookie(login.token, login.ttlMs);
+    if (login.ok) await setSessionCookie(login.token);
 
     return NextResponse.json({
       ok: true,
