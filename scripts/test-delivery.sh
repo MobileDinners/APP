@@ -24,11 +24,19 @@ OTP=$(curl -s -X POST "$B/api/auth/otp/request" -H 'Content-Type: application/js
 curl -s -o /dev/null -c $CUST -X POST "$B/api/auth/otp/verify" \
   -H 'Content-Type: application/json' -d "{\"phone\":\"4155550166\",\"code\":\"$OTP\"}"
 
+# Creates an order AND pays for it, because everything below here needs food
+# that has actually been bought. With a processor configured an order stops at
+# PENDING_PAYMENT until a card clears, so it can never reach READY and no
+# courier can be booked against it; pay-order.mjs drives the same card the
+# checkout would and is a no-op when no processor is configured.
 mkorder() {
-  curl -s -b $CUST --max-time 120 -X POST "$B/api/orders" \
+  local id
+  id=$(curl -s -b $CUST --max-time 120 -X POST "$B/api/orders" \
     -H 'Content-Type: application/json' -H "Idempotency-Key: dlv-$RANDOM$RANDOM" \
     -d "{\"orgId\":\"org_sunrise\",\"fulfillment\":\"$1\",\"lines\":[{\"itemId\":\"it_pastor\",\"qty\":2,\"choiceIds\":[],\"notes\":\"\"}]}" \
-    | jq_ "d.order.orderId"
+    | jq_ "d.order.orderId")
+  node scripts/pay-order.mjs "$id" $CUST "$B" > /dev/null
+  echo "$id"
 }
 
 echo "=== 1. access control ==="

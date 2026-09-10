@@ -38,21 +38,31 @@ chk "scoped to the signed-in org" \
   "$(q "SELECT COUNT(*) FROM orgs WHERE org_id='org_sunrise' AND stripe_account_id IS NOT NULL")" "1"
 chk "no other restaurant was touched" \
   "$(q "SELECT COUNT(*) FROM orgs WHERE org_id!='org_sunrise' AND stripe_account_id IS NOT NULL")" "0"
-chk "and the deployment reports it has no live processor" \
-  "$(curl -s -b $OWNER --max-time 120 "$B/api/payments/connect" | jq_ "d.mode")" "none"
+# Which mode is correct depends on whether keys are configured, so assert
+# that the deployment AGREES WITH ITSELF rather than hard-coding one answer.
+# The old assertion demanded "none", so it started failing the day Stripe was
+# configured and would have gone on failing forever.
+MODE=$(curl -s -b $OWNER --max-time 120 "$B/api/payments/connect" | jq_ "d.mode")
+STRIPE_ON=$(node scripts/stripe-mode.mjs)
+echo "  processor: $MODE (keys say: $STRIPE_ON)"
+chk "the reported processor matches the keys that are configured" "$MODE" "$STRIPE_ON"
 
 echo
 echo "=== 4. webhooks refuse anything they cannot verify ==="
-# Without STRIPE_WEBHOOK_SECRET the endpoint is closed entirely, which is the
-# correct posture: an unverifiable payment event must never move money.
+# What matters is that an unverifiable payment event NEVER moves money. The
+# status code that says so depends on configuration: 503 when no webhook secret
+# is set and the endpoint is closed entirely, 400 when it is open and rejects a
+# bad signature. Asserting 503 only tested the unconfigured case.
+refused() { [ "$1" != "200" ] && [ "$1" != "204" ] && echo "refused" || echo "ACCEPTED"; }
 chk "an unsigned event is refused" \
-  "$(code -X POST "$B/api/payments/webhook" -H 'Content-Type: application/json' \
-     -d '{"id":"evt_test_1","type":"payment_intent.succeeded"}')" "503"
+  "$(refused "$(code -X POST "$B/api/payments/webhook" -H 'Content-Type: application/json' \
+     -d '{"id":"evt_test_1","type":"payment_intent.succeeded"}')")" "refused"
 chk "a forged signature is refused" \
-  "$(code -X POST "$B/api/payments/webhook" -H 'Content-Type: application/json' \
+  "$(refused "$(code -X POST "$B/api/payments/webhook" -H 'Content-Type: application/json' \
      -H 'stripe-signature: t=1,v1=deadbeef' \
-     -d '{"id":"evt_test_2","type":"payment_intent.succeeded"}')" "503"
-chk "and neither was recorded" "$(q "SELECT COUNT(*) FROM payment_events")" "0"
+     -d '{"id":"evt_test_2","type":"payment_intent.succeeded"}')")" "refused"
+chk "and neither was recorded" \
+  "$(q "SELECT COUNT(*) FROM payment_events WHERE event_id IN ('evt_test_1','evt_test_2')")" "0"
 
 echo
 echo "=== 5. the operator screen ==="
@@ -64,10 +74,20 @@ else
   fail "shift lead sees the restriction" "missing"
 fi
 chk "anonymous is sent to sign in" "$(code "$B/ops/payments")" "307"
-if curl -s -b $OWNER --max-time 240 "$B/ops/payments" | grep -q 'no money moves'; then
-  pass "the sandbox says plainly that no money moves"
+# The "no money moves" banner is supposed to DISAPPEAR once a real processor
+# is connected, so which way this goes depends on the mode.
+if [ "$STRIPE_ON" = "none" ]; then
+  if curl -s -b $OWNER --max-time 240 "$B/ops/payments" | grep -q 'no money moves'; then
+    pass "the sandbox says plainly that no money moves"
+  else
+    fail "sandbox warning shown" "missing"
+  fi
 else
-  fail "sandbox warning shown" "missing"
+  if curl -s -b $OWNER --max-time 240 "$B/ops/payments" | grep -q 'no money moves'; then
+    fail "the sandbox warning is gone once a processor is live" "still shown"
+  else
+    pass "the sandbox warning is gone once a processor is live"
+  fi
 fi
 
 echo
@@ -81,7 +101,19 @@ ORDER=$(curl -s -b /tmp/md_pay_cust --max-time 120 -X POST "$B/api/orders" \
   -d '{"orgId":"org_sunrise","fulfillment":"pickup","lines":[{"itemId":"it_pastor","qty":2,"choiceIds":[],"notes":""}]}' \
   | jq_ "d.order.orderId")
 echo "  order: $ORDER"
-SPLIT=$(q "SELECT payload FROM order_events WHERE order_id='$ORDER' AND event_type='payment.authorized'")
+
+# With a processor configured an order waits at PENDING_PAYMENT until a card
+# actually clears, so pay for it the way the checkout would. In sandbox mode
+# this is a no-op and the order is already CONFIRMED.
+PAID=$(node scripts/pay-order.mjs "$ORDER" /tmp/md_pay_cust "$B")
+echo "  paid: $PAID"
+chk "the order is confirmed once the card clears" \
+  "$(q "SELECT state FROM orders WHERE order_id='$ORDER'")" "CONFIRMED"
+
+# Both paths write the same split. Sandbox calls it payment.authorized, the
+# card path payment.requested; either way it is the one row that says who got
+# paid what.
+SPLIT=$(q "SELECT payload FROM order_events WHERE order_id='$ORDER' AND event_type IN ('payment.authorized','payment.requested') ORDER BY seq LIMIT 1")
 echo "  $SPLIT"
 chk "commission is zero, in the ledger" \
   "$(echo "$SPLIT" | node -pe "try{JSON.parse(require('fs').readFileSync(0)).commission_cents}catch(e){'ERR'}")" "0"
@@ -91,6 +123,18 @@ if [ "$REST" -gt 0 ] && [ "$REST" -lt "$TOTAL" ]; then
   pass "the restaurant's share is recorded ($REST of $TOTAL)"
 else
   fail "restaurant share recorded" "$REST of $TOTAL"
+fi
+
+# When a card really cleared there is a payments row too, and it has to agree
+# with the ledger. A split that says one thing while the money says another is
+# the failure this whole file exists to catch.
+if [ "$PAID" != "sandbox" ]; then
+  chk "the charge is recorded as succeeded" \
+    "$(q "SELECT status FROM payments WHERE order_id='$ORDER'")" "succeeded"
+  chk "the charge matches the order total" \
+    "$(q "SELECT charge_cents FROM payments WHERE order_id='$ORDER'")" "$TOTAL"
+  chk "the restaurant's share matches the ledger" \
+    "$(q "SELECT restaurant_cents FROM payments WHERE order_id='$ORDER'")" "$REST"
 fi
 
 echo

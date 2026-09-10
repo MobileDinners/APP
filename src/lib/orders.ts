@@ -440,6 +440,12 @@ export function createOrder(input: CreateOrderInput): Order {
           to_restaurant_cents: split.restaurantCents,
           to_driver_cents: split.driverTipCents,
           platform_cents: split.platformCents,
+          // Recorded on both paths on purpose. Zero commission is the central
+          // promise of this business, and an auditor reading the ledger should
+          // find it stated on every order rather than inferred from the absence
+          // of a line. It was already on the sandbox event; leaving it off the
+          // real one meant the claim was only written down when no money moved.
+          commission_cents: 0,
         },
         "system",
         "SYSTEM",
